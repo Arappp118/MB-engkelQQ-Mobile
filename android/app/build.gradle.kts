@@ -12,7 +12,12 @@ val localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {
     localProperties.load(FileInputStream(localPropertiesFile))
 }
-val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: "DEFAULT_MAPS_API_KEY"
+val mapsApiKey: String = (
+    localProperties.getProperty("MAPS_API_KEY")
+        ?: System.getenv("MAPS_API_KEY")
+        ?: (project.findProperty("MAPS_API_KEY") as? String)
+        ?: "DEFAULT_MAPS_API_KEY"
+)
 
 android {
     namespace = "com.example.mb_engkelqq_mobile"

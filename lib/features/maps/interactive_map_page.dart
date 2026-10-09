@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/service_area_constants.dart';
 import '../../core/constants/workshop_constants.dart';
@@ -53,8 +55,7 @@ class InteractiveMapPage extends StatefulWidget {
 
 class _InteractiveMapPageState extends State<InteractiveMapPage> {
   final LocationService _locationService = LocationService();
-
-  GoogleMapController? _mapController;
+  final MapController _mapController = MapController();
 
   bool _isLoading = true;
   String? _errorMessage;
@@ -75,9 +76,9 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
   // Jarak ke workshop / destination
   double? _calculatedDistanceKm;
 
-  // Marker & Polygon set
-  final Set<Marker> _markers = {};
-  final Set<Polygon> _polygons = {};
+  // Marker & Polygon list untuk flutter_map
+  final List<Marker> _markers = [];
+  final List<Polygon> _polygons = [];
 
   @override
   void initState() {
@@ -87,16 +88,16 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
   }
 
   void _initPolygons() {
+    _polygons.clear();
     // Polygon batas administratif Kota Tanjungpinang
     _polygons.add(
       Polygon(
-        polygonId: const PolygonId('tanjungpinang_administrative_area'),
         points: ServiceAreaConstants.administrativePolygon
             .map((p) => LatLng(p.latitude, p.longitude))
             .toList(),
-        strokeColor: Colors.blue.shade800,
-        strokeWidth: 2,
-        fillColor: Colors.blue.withValues(alpha: 0.10),
+        borderColor: Colors.blue.shade800,
+        borderStrokeWidth: 2,
+        color: Colors.blue.withValues(alpha: 0.12),
       ),
     );
   }
@@ -218,15 +219,46 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
     // 1. Marker Workshop MB-engkelQQ di Kota Tanjungpinang (Selalu ditampilkan)
     _markers.add(
       Marker(
-        markerId: const MarkerId('workshop'),
-        position: const LatLng(
+        point: const LatLng(
           WorkshopConstants.workshopLatitude,
           WorkshopConstants.workshopLongitude,
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-        infoWindow: const InfoWindow(
-          title: WorkshopConstants.workshopName,
-          snippet: WorkshopConstants.workshopAddress,
+        width: 48,
+        height: 52,
+        alignment: Alignment.topCenter,
+        child: Tooltip(
+          message:
+              '${WorkshopConstants.workshopName}\n${WorkshopConstants.workshopAddress}',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black38,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.build_rounded,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+              const Icon(
+                Icons.arrow_drop_down,
+                size: 16,
+                color: AppColors.primary,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -235,14 +267,42 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
     if (_currentLat != null && _currentLng != null) {
       _markers.add(
         Marker(
-          markerId: const MarkerId('current_location'),
-          position: LatLng(_currentLat!, _currentLng!),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueAzure,
-          ),
-          infoWindow: const InfoWindow(
-            title: 'Lokasi Anda Saat Ini',
-            snippet: 'Posisi GPS perangkat',
+          point: LatLng(_currentLat!, _currentLng!),
+          width: 44,
+          height: 48,
+          alignment: Alignment.topCenter,
+          child: Tooltip(
+            message: 'Lokasi Anda Saat Ini (GPS Perangkat)',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: AppColors.secondary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.my_location_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 14,
+                  color: AppColors.secondary,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -252,24 +312,45 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
     if (widget.mode == MapPageMode.picker &&
         _selectedLat != null &&
         _selectedLng != null) {
+      final pinColor = _isInsideServiceArea
+          ? AppColors.error
+          : AppColors.warning;
       _markers.add(
         Marker(
-          markerId: const MarkerId('selected_location'),
-          position: LatLng(_selectedLat!, _selectedLng!),
-          draggable: true,
-          onDragEnd: (newPos) {
-            _onMapTapped(newPos);
-          },
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            _isInsideServiceArea
-                ? BitmapDescriptor.hueRed
-                : BitmapDescriptor.hueRose,
-          ),
-          infoWindow: InfoWindow(
-            title: _isInsideServiceArea
-                ? 'Titik Pickup Dipilih'
-                : 'Di Luar Wilayah Layanan',
-            snippet: _selectedAddress.isNotEmpty ? _selectedAddress : null,
+          point: LatLng(_selectedLat!, _selectedLng!),
+          width: 50,
+          height: 56,
+          alignment: Alignment.topCenter,
+          child: Tooltip(
+            message: _isInsideServiceArea
+                ? 'Titik Pickup Dipilih\n$_selectedAddress'
+                : 'Di Luar Wilayah Layanan\n$_selectedAddress',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: pinColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 6,
+                        offset: Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.location_on_rounded,
+                    size: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                Icon(Icons.arrow_drop_down, size: 16, color: pinColor),
+              ],
+            ),
           ),
         ),
       );
@@ -281,17 +362,46 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
         widget.destinationLongitude != null) {
       _markers.add(
         Marker(
-          markerId: const MarkerId('destination'),
-          position: LatLng(
+          point: LatLng(
             widget.destinationLatitude!,
             widget.destinationLongitude!,
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen,
-          ),
-          infoWindow: InfoWindow(
-            title: widget.destinationTitle ?? 'Lokasi Tujuan',
-            snippet: widget.destinationAddress ?? 'Alamat Tujuan',
+          width: 48,
+          height: 52,
+          alignment: Alignment.topCenter,
+          child: Tooltip(
+            message:
+                '${widget.destinationTitle ?? 'Lokasi Tujuan'}\n${widget.destinationAddress ?? ''}',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black38,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.flag_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_drop_down,
+                  size: 16,
+                  color: AppColors.success,
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -310,13 +420,23 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
   }
 
   void _animateToPosition(double lat, double lng, {double zoom = 14.5}) {
-    if (_mapController != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: LatLng(lat, lng), zoom: zoom),
-        ),
-      );
-    }
+    try {
+      _mapController.move(LatLng(lat, lng), zoom);
+    } catch (_) {}
+  }
+
+  void _zoomIn() {
+    try {
+      final currentZoom = _mapController.camera.zoom;
+      _mapController.move(_mapController.camera.center, currentZoom + 1.0);
+    } catch (_) {}
+  }
+
+  void _zoomOut() {
+    try {
+      final currentZoom = _mapController.camera.zoom;
+      _mapController.move(_mapController.camera.center, currentZoom - 1.0);
+    } catch (_) {}
   }
 
   void _recenterToCurrent() {
@@ -543,30 +663,64 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
 
     return Stack(
       children: [
-        // 1. Google Map View dengan Polygon Wilayah Layanan Tanjungpinang
-        GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: initialTarget,
-            zoom: 14,
+        // 1. OpenStreetMap View via flutter_map dengan Polygon & Markers
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: initialTarget,
+            initialZoom: 14.0,
+            minZoom: 4.0,
+            maxZoom: 18.5,
+            onTap: (tapPosition, point) => _onMapTapped(point),
           ),
-          onMapCreated: (controller) {
-            _mapController = controller;
-          },
-          onTap: _onMapTapped,
-          markers: _markers,
-          polygons: _polygons,
-          myLocationEnabled: true,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: false,
-          compassEnabled: true,
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.example.mb_engkelqq_mobile',
+              maxZoom: 19,
+            ),
+            PolygonLayer(polygons: _polygons),
+            MarkerLayer(markers: _markers),
+            RichAttributionWidget(
+              attributions: [
+                TextSourceAttribution(
+                  'OpenStreetMap contributors',
+                  onTap: () {
+                    launchUrl(
+                      Uri.parse('https://openstreetmap.org/copyright'),
+                      mode: LaunchMode.externalApplication,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
 
-        // 2. Floating action quick buttons (Recenter)
+        // 2. Floating action quick buttons (Zoom & Recenter)
         Positioned(
           top: 16,
           right: 16,
           child: Column(
             children: [
+              FloatingActionButton.small(
+                heroTag: 'zoom_in',
+                tooltip: 'Perbesar Peta',
+                backgroundColor: AppColors.surfaceCardElevated,
+                foregroundColor: AppColors.textPrimary,
+                onPressed: _zoomIn,
+                child: const Icon(Icons.add),
+              ),
+              const SizedBox(height: 6),
+              FloatingActionButton.small(
+                heroTag: 'zoom_out',
+                tooltip: 'Perkecil Peta',
+                backgroundColor: AppColors.surfaceCardElevated,
+                foregroundColor: AppColors.textPrimary,
+                onPressed: _zoomOut,
+                child: const Icon(Icons.remove),
+              ),
+              const SizedBox(height: 12),
               FloatingActionButton.small(
                 heroTag: 'recenter_current',
                 tooltip: 'Lokasi Saya (GPS)',
@@ -806,7 +960,7 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
               ),
               icon: const Icon(Icons.navigation_outlined, size: 18),
               label: const Text(
-                'Buka Navigasi (Google Maps)',
+                'Buka Navigasi Peta',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),

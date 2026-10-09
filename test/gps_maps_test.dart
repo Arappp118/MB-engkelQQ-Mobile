@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:mb_engkelqq_mobile/core/constants/service_area_constants.dart';
 import 'package:mb_engkelqq_mobile/core/constants/workshop_constants.dart';
 import 'package:mb_engkelqq_mobile/features/maps/interactive_map_page.dart';
@@ -157,6 +158,53 @@ void main() {
         message: 'Aktifkan layanan lokasi/GPS pada perangkat Anda untuk memeriksa ketersediaan layanan.',
       );
       expect(serviceDisabled.isGranted, isFalse);
+      const deniedForever = LocationPermissionResult(
+        state: LocationPermissionState.deniedForever,
+        title: 'Izin Lokasi Diperlukan',
+        message: 'Izin akses lokasi ditolak permanen. Silakan aktifkan izin lokasi di Pengaturan Aplikasi.',
+      );
+      expect(deniedForever.isGranted, isFalse);
+    });
+
+    test('LocationData model properties return correctly', () {
+      final position = Position(
+        latitude: 0.9198336,
+        longitude: 104.4930591,
+        timestamp: DateTime(2026, 1, 1),
+        accuracy: 5.0,
+        altitude: 10.0,
+        altitudeAccuracy: 1.0,
+        heading: 0.0,
+        headingAccuracy: 0.0,
+        speed: 0.0,
+        speedAccuracy: 0.0,
+      );
+
+      final locationData = LocationData(
+        position: position,
+        address: 'Jl. Kota Piring No.06, Air Raja',
+        distanceToWorkshopKm: 0.0,
+        isInsideServiceArea: true,
+      );
+
+      expect(locationData.latitude, 0.9198336);
+      expect(locationData.longitude, 104.4930591);
+      expect(locationData.address, contains('Kota Piring'));
+      expect(locationData.distanceToWorkshopKm, 0.0);
+      expect(locationData.isInsideServiceArea, isTrue);
+    });
+
+    test('LocationServiceException holds title, message, and state', () {
+      final exception = LocationServiceException(
+        'GPS mati',
+        title: 'GPS Tidak Aktif',
+        state: LocationPermissionState.serviceDisabled,
+      );
+
+      expect(exception.message, 'GPS mati');
+      expect(exception.title, 'GPS Tidak Aktif');
+      expect(exception.state, LocationPermissionState.serviceDisabled);
+      expect(exception.toString(), 'GPS mati');
     });
 
     test('MapPickerResult stores coordinates and address accurately', () {
@@ -177,7 +225,7 @@ void main() {
   });
 
   group('InteractiveMapPage Widget Tests', () {
-    testWidgets('renders loading state initially without crashing', (
+    testWidgets('renders loading state initially in viewer mode', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -192,8 +240,41 @@ void main() {
         ),
       );
 
-      // Loading indicator atau teks status ditampilkan
       expect(find.byType(InteractiveMapPage), findsOneWidget);
+      expect(find.text('Peta & Navigasi'), findsOneWidget);
+    });
+
+    testWidgets('renders loading state initially in picker mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: InteractiveMapPage(
+            mode: MapPageMode.picker,
+            initialLatitude: 0.9198336,
+            initialLongitude: 104.4930591,
+          ),
+        ),
+      );
+
+      expect(find.byType(InteractiveMapPage), findsOneWidget);
+      expect(find.text('Pilih Lokasi Pickup'), findsOneWidget);
+    });
+
+    testWidgets('InteractiveMapPage provides refresh action button in AppBar', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: InteractiveMapPage(
+            mode: MapPageMode.picker,
+            initialLatitude: 0.9198336,
+            initialLongitude: 104.4930591,
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
   });
 }
