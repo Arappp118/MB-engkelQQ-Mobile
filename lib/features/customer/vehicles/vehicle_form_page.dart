@@ -26,11 +26,23 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
   late final TextEditingController _merkController;
   late final TextEditingController _modelController;
   late final TextEditingController _tahunController;
-  late final TextEditingController _tipeMesinController;
-  late final TextEditingController _transmisiController;
   late final TextEditingController _warnaController;
   late final TextEditingController _nomorRangkaController;
   late final TextEditingController _catatanController;
+
+  String _selectedTipeMesin = '4_tak';
+  String _selectedTransmisi = 'matic';
+
+  final List<Map<String, String>> _tipeMesinOptions = const [
+    {'value': '4_tak', 'label': '4-Tak'},
+    {'value': '2_tak', 'label': '2-Tak'},
+    {'value': 'listrik', 'label': 'Motor Listrik'},
+  ];
+
+  final List<Map<String, String>> _transmisiOptions = const [
+    {'value': 'matic', 'label': 'Matic'},
+    {'value': 'manual', 'label': 'Manual'},
+  ];
 
   @override
   void initState() {
@@ -50,13 +62,15 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
       text: vehicle?.tahun?.toString() ?? '',
     );
 
-    _tipeMesinController = TextEditingController(
-      text: vehicle?.tipeMesin ?? '',
-    );
+    if (vehicle?.tipeMesin != null &&
+        ['2_tak', '4_tak', 'listrik'].contains(vehicle!.tipeMesin)) {
+      _selectedTipeMesin = vehicle.tipeMesin!;
+    }
 
-    _transmisiController = TextEditingController(
-      text: vehicle?.transmisi ?? '',
-    );
+    if (vehicle?.transmisi != null &&
+        ['manual', 'matic'].contains(vehicle!.transmisi)) {
+      _selectedTransmisi = vehicle.transmisi!;
+    }
 
     _warnaController = TextEditingController(text: vehicle?.warna ?? '');
 
@@ -73,8 +87,6 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
     _merkController.dispose();
     _modelController.dispose();
     _tahunController.dispose();
-    _tipeMesinController.dispose();
-    _transmisiController.dispose();
     _warnaController.dispose();
     _nomorRangkaController.dispose();
     _catatanController.dispose();
@@ -110,8 +122,8 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
         merk: _merkController.text.trim(),
         model: _modelController.text.trim(),
         tahun: tahun,
-        tipeMesin: _optionalValue(_tipeMesinController),
-        transmisi: _optionalValue(_transmisiController),
+        tipeMesin: _selectedTipeMesin,
+        transmisi: _selectedTransmisi,
         warna: _optionalValue(_warnaController),
         nomorRangka: _optionalValue(_nomorRangkaController),
         catatan: _optionalValue(_catatanController),
@@ -122,8 +134,8 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
         merk: _merkController.text.trim(),
         model: _modelController.text.trim(),
         tahun: tahun,
-        tipeMesin: _optionalValue(_tipeMesinController),
-        transmisi: _optionalValue(_transmisiController),
+        tipeMesin: _selectedTipeMesin,
+        transmisi: _selectedTransmisi,
         warna: _optionalValue(_warnaController),
         nomorRangka: _optionalValue(_nomorRangkaController),
         catatan: _optionalValue(_catatanController),
@@ -269,29 +281,53 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                 ),
                 const SizedBox(height: 24),
                 const SectionHeader(
-                  title: 'Spesifikasi Tambahan (Opsional)',
-                  subtitle: 'Detail mesin, transmisi, dan warna',
+                  title: 'Spesifikasi Kendaraan',
+                  subtitle: 'Tipe mesin, transmisi, dan warna motor',
                 ),
                 PremiumCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      TextFormField(
-                        controller: _tipeMesinController,
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedTipeMesin,
+                        dropdownColor: AppColors.surfaceCardElevated,
                         decoration: const InputDecoration(
-                          labelText: 'Kapasitas / Tipe Mesin',
-                          hintText: 'Contoh: 150cc, 4-tak',
+                          labelText: 'Tipe Mesin *',
                           prefixIcon: Icon(Icons.speed_outlined),
                         ),
+                        items: _tipeMesinOptions.map((item) {
+                          return DropdownMenuItem<String>(
+                            value: item['value'],
+                            child: Text(item['label']!),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _selectedTipeMesin = value;
+                          });
+                        },
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _transmisiController,
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedTransmisi,
+                        dropdownColor: AppColors.surfaceCardElevated,
                         decoration: const InputDecoration(
-                          labelText: 'Transmisi',
-                          hintText: 'Contoh: Matic, Manual, Bebek',
+                          labelText: 'Transmisi *',
                           prefixIcon: Icon(Icons.tune_outlined),
                         ),
+                        items: _transmisiOptions.map((item) {
+                          return DropdownMenuItem<String>(
+                            value: item['value'],
+                            child: Text(item['label']!),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _selectedTransmisi = value;
+                          });
+                        },
                       ),
                       const SizedBox(height: 16),
                       TextFormField(

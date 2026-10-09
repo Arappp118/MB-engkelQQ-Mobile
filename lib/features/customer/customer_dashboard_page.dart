@@ -201,26 +201,23 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(70),
-        child: AppAvatarHeader(
-          name: userName,
-          role: 'Customer',
-          subtitle: 'Pantau servis & rawat motormu',
-          unreadCount: notifProvider.unreadCount,
-          onNotificationTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NotificationCenterPage()),
-            );
-          },
-          actions: [
-            IconButton(
-              tooltip: 'Logout',
-              icon: const Icon(Icons.logout, color: AppColors.textSecondary),
-              onPressed: auth.isAuthenticated ? _logout : null,
-            ),
-          ],
-        ),
+      appBar: AppAvatarHeader(
+        name: userName,
+        role: 'Customer',
+        subtitle: 'Pantau servis & rawat motormu',
+        unreadCount: notifProvider.unreadCount,
+        onNotificationTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotificationCenterPage()),
+          );
+        },
+        actions: [
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout, color: AppColors.textSecondary),
+            onPressed: auth.isAuthenticated ? _logout : null,
+          ),
+        ],
       ),
       body: RefreshIndicator(
         color: AppColors.primary,
@@ -550,7 +547,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        mainAxisExtent: 110,
+        mainAxisExtent: 140,
       ),
       itemCount: cards.length,
       itemBuilder: (context, index) => cards[index],

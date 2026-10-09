@@ -346,11 +346,13 @@ class _NotificationCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _formatDate(notification.createdAt),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textMuted,
+                    Expanded(
+                      child: Text(
+                        _formatDate(notification.createdAt),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ),
                     if (isUnread)

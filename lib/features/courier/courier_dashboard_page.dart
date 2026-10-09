@@ -460,18 +460,27 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     });
 
     try {
-      await provider.startDeliveryTask(widget.taskId);
+      final success = await provider.startDeliveryTask(widget.taskId);
 
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pickup berhasil dimulai.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pickup berhasil dimulai.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.errorMessage ?? 'Gagal memulai pickup.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } catch (error) {
       if (!mounted) {
         return;
@@ -500,18 +509,29 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     });
 
     try {
-      await provider.completeDeliveryTask(widget.taskId);
+      final success = await provider.completeDeliveryTask(widget.taskId);
 
       if (!mounted) {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pickup berhasil diselesaikan.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pickup berhasil diselesaikan.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              provider.errorMessage ?? 'Gagal menyelesaikan pickup.',
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } catch (error) {
       if (!mounted) {
         return;

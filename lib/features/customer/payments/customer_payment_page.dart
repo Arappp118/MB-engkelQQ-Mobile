@@ -501,22 +501,30 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: bold ? 15 : 13,
-              fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-              color: bold ? AppColors.textPrimary : AppColors.textSecondary,
+          Expanded(
+            flex: 5,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: bold ? 15 : 13,
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+                color: bold ? AppColors.textPrimary : AppColors.textSecondary,
+              ),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: bold ? 18 : 13,
-              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-              color: bold ? AppColors.primary : AppColors.textPrimary,
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 6,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontSize: bold ? 18 : 13,
+                fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+                color: bold ? AppColors.primary : AppColors.textPrimary,
+              ),
             ),
           ),
         ],

@@ -486,16 +486,19 @@ class _PaymentSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Pembayaran Siap Dilakukan',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+              const Expanded(
+                child: Text(
+                  'Pembayaran Siap Dilakukan',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               StatusBadge(status: 'Menunggu Pembayaran'),
             ],
           ),
@@ -612,22 +615,30 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: bold ? 15 : 13,
-            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
-            color: bold ? AppColors.textPrimary : AppColors.textSecondary,
+        Expanded(
+          flex: 5,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: bold ? 15 : 13,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+              color: bold ? AppColors.textPrimary : AppColors.textSecondary,
+            ),
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: bold ? 17 : 13,
-            fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-            color: bold ? AppColors.primary : AppColors.textPrimary,
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: TextStyle(
+              fontSize: bold ? 17 : 13,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+              color: bold ? AppColors.primary : AppColors.textPrimary,
+            ),
           ),
         ),
       ],

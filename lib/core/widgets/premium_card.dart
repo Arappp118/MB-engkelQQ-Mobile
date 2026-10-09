@@ -26,10 +26,9 @@ class PremiumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = Container(
+    final cardBody = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: backgroundColor ?? AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(color: borderColor ?? AppColors.border, width: 1),
         boxShadow: hasGlow
@@ -46,19 +45,20 @@ class PremiumCard extends StatelessWidget {
       child: child,
     );
 
-    if (onTap != null) {
-      content = Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(borderRadius),
-          splashColor: AppColors.primaryContainer,
-          highlightColor: AppColors.borderSubtle,
-          child: content,
-        ),
-      );
-    }
+    Widget content = Material(
+      color: backgroundColor ?? AppColors.surfaceCard,
+      borderRadius: BorderRadius.circular(borderRadius),
+      clipBehavior: Clip.antiAlias,
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(borderRadius),
+              splashColor: AppColors.primaryContainer,
+              highlightColor: AppColors.borderSubtle,
+              child: cardBody,
+            )
+          : cardBody,
+    );
 
     if (margin != null) {
       content = Padding(padding: margin!, child: content);

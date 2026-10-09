@@ -383,18 +383,22 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
             const Divider(color: AppColors.borderSubtle),
             const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Estimasi Biaya:',
-                  style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                const Expanded(
+                  child: Text(
+                    'Estimasi Biaya:',
+                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                  ),
                 ),
-                Text(
-                  _formatCurrency(serviceOrder.grandTotal!),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                Expanded(
+                  child: Text(
+                    _formatCurrency(serviceOrder.grandTotal!),
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ],

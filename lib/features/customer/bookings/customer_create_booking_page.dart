@@ -36,7 +36,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
-  String _selectedService = 'servis_rutin';
+  String _selectedService = 'service_rutin';
   bool _pickupRequested = false;
 
   // Koordinat GPS untuk pickup
@@ -45,12 +45,9 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
   bool _isGettingLocation = false;
 
   final List<Map<String, String>> _serviceTypes = const [
-    {'value': 'servis_rutin', 'label': 'Servis Rutin'},
-    {'value': 'tune_up', 'label': 'Tune Up'},
-    {'value': 'ganti_oli', 'label': 'Ganti Oli'},
-    {'value': 'overhaul', 'label': 'Overhaul'},
-    {'value': 'kelistrikan', 'label': 'Kelistrikan'},
-    {'value': 'lainnya', 'label': 'Lainnya'},
+    {'value': 'service_rutin', 'label': 'Servis Rutin'},
+    {'value': 'perbaikan', 'label': 'Perbaikan'},
+    {'value': 'medical_checkup', 'label': 'Medical Checkup'},
   ];
 
   @override
@@ -597,6 +594,8 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
                               _selectedDate == null
                                   ? 'Pilih tanggal'
                                   : _formatDate(_selectedDate!),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: _selectedDate == null
                                     ? AppColors.textMuted
@@ -620,6 +619,8 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
                               _selectedTime == null
                                   ? 'Pilih waktu'
                                   : _selectedTime!.format(context),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: _selectedTime == null
                                     ? AppColors.textMuted
@@ -802,7 +803,13 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
                                 TextButton(
                                   onPressed: _openMapPicker,
                                   style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
                                     foregroundColor: AppColors.secondary,
                                   ),
                                   child: const Text('Ubah Peta'),

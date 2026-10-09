@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-class AppAvatarHeader extends StatelessWidget {
+class AppAvatarHeader extends StatelessWidget implements PreferredSizeWidget {
   const AppAvatarHeader({
     super.key,
     required this.name,
@@ -20,6 +20,9 @@ class AppAvatarHeader extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final List<Widget>? actions;
 
+  @override
+  Size get preferredSize => const Size.fromHeight(80);
+
   String get _initials {
     final parts = name.trim().split(' ');
     if (parts.length >= 2) {
@@ -31,12 +34,10 @@ class AppAvatarHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: const Border(
-          bottom: BorderSide(color: AppColors.border, width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
       ),
       child: SafeArea(
         bottom: false,
