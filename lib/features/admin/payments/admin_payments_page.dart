@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_states.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../core/widgets/status_badge.dart';
 import '../../../models/payment.dart';
 import '../../../models/service_order.dart';
 import '../../../providers/payment_provider.dart';
@@ -35,17 +39,33 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Verifikasi Pembayaran'),
+          backgroundColor: AppColors.surfaceCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          title: const Text(
+            'Verifikasi Pembayaran',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
           content: Text(
             'Apakah pembayaran #${payment.id} sebesar '
             '${_formatCurrency(payment.amount)} ingin diverifikasi?',
+            style: const TextStyle(color: AppColors.textSecondary),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Batal'),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             ),
             FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => Navigator.of(dialogContext).pop(true),
               child: const Text('Verifikasi'),
             ),
@@ -63,7 +83,10 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pembayaran berhasil diverifikasi.')),
+        const SnackBar(
+          content: Text('Pembayaran berhasil diverifikasi.'),
+          backgroundColor: AppColors.success,
+        ),
       );
       _loadData();
     } else {
@@ -72,6 +95,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
           content: Text(
             provider.errorMessage ?? 'Gagal memverifikasi pembayaran.',
           ),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -84,20 +108,32 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Tolak Pembayaran'),
+          backgroundColor: AppColors.surfaceCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          title: const Text(
+            'Tolak Pembayaran',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Masukkan alasan penolakan pembayaran #${payment.id}:'),
+              Text(
+                'Masukkan alasan penolakan pembayaran #${payment.id}:',
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: reasonController,
                 autofocus: true,
                 maxLines: 3,
+                style: const TextStyle(color: AppColors.textPrimary),
                 decoration: const InputDecoration(
                   hintText: 'Contoh: Bukti transfer tidak jelas / nominal tidak sesuai',
-                  border: OutlineInputBorder(),
+                  hintStyle: TextStyle(color: AppColors.textMuted),
                 ),
               ),
             ],
@@ -105,11 +141,15 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Batal'),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
               ),
               onPressed: () {
                 final text = reasonController.text.trim();
@@ -134,13 +174,17 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pembayaran berhasil ditolak.')),
+        const SnackBar(
+          content: Text('Pembayaran berhasil ditolak.'),
+          backgroundColor: AppColors.warning,
+        ),
       );
       _loadData();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(provider.errorMessage ?? 'Gagal menolak pembayaran.'),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -155,7 +199,15 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
             (payment.proofUrl != null && payment.proofUrl!.isNotEmpty);
 
         return AlertDialog(
-          title: Text('Bukti Pembayaran #${payment.id}'),
+          backgroundColor: AppColors.surfaceCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          title: Text(
+            'Bukti Pembayaran #${payment.id}',
+            style: const TextStyle(color: AppColors.textPrimary),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,7 +215,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
               if (payment.proofUrl != null && payment.proofUrl!.isNotEmpty)
                 Center(
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                     child: Image.network(
                       payment.proofUrl!,
                       height: 220,
@@ -171,7 +223,10 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                       errorBuilder: (context, error, stackTrace) =>
                           const Padding(
                             padding: EdgeInsets.all(24),
-                            child: Text('Gagal memuat gambar bukti.'),
+                            child: Text(
+                              'Gagal memuat gambar bukti.',
+                              style: TextStyle(color: AppColors.textMuted),
+                            ),
                           ),
                     ),
                   ),
@@ -181,11 +236,12 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                   padding: EdgeInsets.symmetric(vertical: 16),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle, color: Colors.green),
-                      SizedBox(width: 8),
+                      Icon(Icons.check_circle, color: AppColors.success),
+                      SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Bukti transfer/QRIS telah diunggah oleh pelanggan.',
+                          style: TextStyle(color: AppColors.textPrimary),
                         ),
                       ),
                     ],
@@ -194,22 +250,35 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
               else
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('Tidak ada file bukti pembayaran terlampir.'),
+                  child: Text(
+                    'Tidak ada file bukti pembayaran terlampir.',
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
                 ),
               if (payment.notes != null && payment.notes!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 const Text(
                   'Catatan:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                Text(payment.notes!),
+                const SizedBox(height: 4),
+                Text(
+                  payment.notes!,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
               ],
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Tutup'),
+              child: const Text(
+                'Tutup',
+                style: TextStyle(color: AppColors.secondary),
+              ),
             ),
           ],
         );
@@ -223,6 +292,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
     final orderProvider = context.watch<ServiceOrderProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Kelola Pembayaran'),
         actions: [
@@ -235,6 +305,48 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
             tooltip: 'Delivery Tasks',
             icon: const Icon(Icons.local_shipping_outlined),
             onPressed: () => context.push('/admin/delivery'),
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 1,
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.primaryContainer,
+        onDestinationSelected: (index) {
+          switch (index) {
+            case 0:
+              context.go('/admin');
+              break;
+            case 1:
+              break;
+            case 2:
+              context.push('/admin/delivery');
+              break;
+            case 3:
+              context.push('/notifications');
+              break;
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month, color: AppColors.primary),
+            label: 'Booking',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.payment_outlined),
+            selectedIcon: Icon(Icons.payment, color: AppColors.primary),
+            label: 'Pembayaran',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.local_shipping_outlined),
+            selectedIcon: Icon(Icons.local_shipping, color: AppColors.primary),
+            label: 'Delivery',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_outlined),
+            selectedIcon: Icon(Icons.notifications, color: AppColors.primary),
+            label: 'Notifikasi',
           ),
         ],
       ),
@@ -256,7 +368,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
@@ -268,8 +380,25 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
             return Padding(
               padding: const EdgeInsets.only(right: 8),
               child: ChoiceChip(
-                label: Text(label),
+                label: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    fontSize: 13,
+                  ),
+                ),
                 selected: isSelected,
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.surface,
+                side: BorderSide(
+                  color: isSelected ? AppColors.primary : AppColors.border,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 onSelected: (selected) {
                   if (selected) {
                     setState(() {
@@ -290,29 +419,14 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
     PaymentProvider paymentProvider,
   ) {
     if (orderProvider.isLoading && orderProvider.serviceOrders.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingState(message: 'Memuat data pembayaran...');
     }
 
     if (orderProvider.errorMessage != null &&
         orderProvider.serviceOrders.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.error_outline, size: 48),
-              const SizedBox(height: 16),
-              Text(orderProvider.errorMessage!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _loadData,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Coba Lagi'),
-              ),
-            ],
-          ),
-        ),
+      return ErrorState(
+        message: orderProvider.errorMessage!,
+        onRetry: _loadData,
       );
     }
 
@@ -340,16 +454,17 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
     if (filtered.isEmpty) {
       return RefreshIndicator(
         onRefresh: _loadData,
+        color: AppColors.primary,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            const SizedBox(height: 140),
-            Center(
-              child: Text(
-                _selectedFilter == 'waiting_verification'
-                    ? 'Tidak ada pembayaran menunggu verifikasi.'
-                    : 'Tidak ada data pembayaran dengan status ini.',
-              ),
+            const SizedBox(height: 120),
+            EmptyState(
+              icon: Icons.receipt_long_outlined,
+              title: 'Tidak Ada Data',
+              message: _selectedFilter == 'waiting_verification'
+                  ? 'Tidak ada pembayaran menunggu verifikasi.'
+                  : 'Tidak ada data pembayaran dengan status ini.',
             ),
           ],
         ),
@@ -358,8 +473,9 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
 
     return RefreshIndicator(
       onRefresh: _loadData,
+      color: AppColors.primary,
       child: ListView.separated(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         itemCount: filtered.length,
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
@@ -440,68 +556,100 @@ class _AdminPaymentCard extends StatelessWidget {
     final status = order.status?.toLowerCase() ?? '-';
     final isPendingVerification = status == 'waiting_payment';
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.payment_outlined),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Order #${order.id}',
-                    style: Theme.of(context).textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.payment_outlined,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Order #${order.id}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                _PaymentStatusBadge(status: status),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _InfoRow(
-              label: 'Booking',
-              value: order.bookingId != null ? '#${order.bookingId}' : '-',
-            ),
-            _InfoRow(
-              label: 'Total Tagihan',
-              value: _formatCurrency(order.grandTotal),
-              isBold: true,
-            ),
-            if (order.diagnosis != null && order.diagnosis!.trim().isNotEmpty)
-              _InfoRow(label: 'Diagnosis', value: order.diagnosis!),
-            if (order.notes != null && order.notes!.trim().isNotEmpty)
-              _InfoRow(label: 'Catatan', value: order.notes!),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                OutlinedButton.icon(
-                  onPressed: onViewProof,
-                  icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: const Text('Bukti'),
+              ),
+              StatusBadge(status: status),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 12),
+          _InfoRow(
+            label: 'Booking',
+            value: order.bookingId != null ? '#${order.bookingId}' : '-',
+          ),
+          _InfoRow(
+            label: 'Total Tagihan',
+            value: _formatCurrency(order.grandTotal),
+            isBold: true,
+          ),
+          if (order.diagnosis != null && order.diagnosis!.trim().isNotEmpty)
+            _InfoRow(label: 'Diagnosis', value: order.diagnosis!),
+          if (order.notes != null && order.notes!.trim().isNotEmpty)
+            _InfoRow(label: 'Catatan', value: order.notes!),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.secondary,
+                  side: const BorderSide(color: AppColors.secondary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-                const Spacer(),
-                if (isPendingVerification) ...[
-                  FilledButton.tonal(
-                    style: FilledButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.error,
+                onPressed: onViewProof,
+                icon: const Icon(Icons.visibility_outlined, size: 18),
+                label: const Text('Bukti'),
+              ),
+              const Spacer(),
+              if (isPendingVerification) ...[
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    side: const BorderSide(color: AppColors.error),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    onPressed: isLoading ? null : onReject,
-                    child: const Text('Tolak'),
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: isLoading ? null : onVerify,
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Verifikasi'),
+                  onPressed: isLoading ? null : onReject,
+                  child: const Text('Tolak'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                ],
+                  onPressed: isLoading ? null : onVerify,
+                  icon: const Icon(Icons.check, size: 18),
+                  label: const Text('Verifikasi'),
+                ),
               ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -517,56 +665,6 @@ class _AdminPaymentCard extends StatelessWidget {
       buffer.write(rounded[i]);
     }
     return 'Rp ${buffer.toString()}';
-  }
-}
-
-class _PaymentStatusBadge extends StatelessWidget {
-  const _PaymentStatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    Color bg;
-    Color fg;
-    String label;
-
-    switch (status) {
-      case 'waiting_payment':
-      case 'waiting_verification':
-        bg = Colors.amber.withValues(alpha: 0.15);
-        fg = Colors.orange.shade800;
-        label = 'Menunggu Verifikasi';
-        break;
-      case 'paid':
-      case 'verified':
-        bg = Colors.green.withValues(alpha: 0.15);
-        fg = Colors.green.shade800;
-        label = 'Terverifikasi';
-        break;
-      case 'payment_rejected':
-      case 'rejected':
-        bg = Colors.red.withValues(alpha: 0.15);
-        fg = Colors.red.shade800;
-        label = 'Ditolak';
-        break;
-      default:
-        bg = Theme.of(context).colorScheme.secondaryContainer;
-        fg = Theme.of(context).colorScheme.onSecondaryContainer;
-        label = status;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-    );
   }
 }
 
@@ -594,7 +692,8 @@ class _InfoRow extends StatelessWidget {
               label,
               style: TextStyle(
                 fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: AppColors.textSecondary,
+                fontSize: 13,
               ),
             ),
           ),
@@ -603,6 +702,8 @@ class _InfoRow extends StatelessWidget {
               value,
               style: TextStyle(
                 fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: isBold ? AppColors.primary : AppColors.textPrimary,
+                fontSize: 13,
               ),
             ),
           ),

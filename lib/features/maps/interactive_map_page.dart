@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/constants/service_area_constants.dart';
 import '../../core/constants/workshop_constants.dart';
+import '../../core/theme/app_colors.dart';
 import '../../services/location_service.dart';
 
 enum MapPageMode {
@@ -423,13 +424,35 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Mengakses GPS dan memuat peta Kota Tanjungpinang...'),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Mengakses GPS & memuat peta Tanjungpinang...',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       );
@@ -439,55 +462,74 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _errorState == LocationPermissionState.serviceDisabled
-                    ? Icons.location_off_outlined
-                    : Icons.security_outlined,
-                size: 64,
-                color: Colors.redAccent,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _errorTitle ?? 'Pemberitahuan Lokasi',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _errorState == LocationPermissionState.serviceDisabled
+                      ? Icons.location_off_outlined
+                      : Icons.security_outlined,
+                  size: 56,
+                  color: AppColors.error,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: _initLocation,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Coba Lagi'),
+                const SizedBox(height: 16),
+                Text(
+                  _errorTitle ?? 'Pemberitahuan Lokasi',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
-                  const SizedBox(width: 12),
-                  if (_errorState == LocationPermissionState.serviceDisabled)
-                    ElevatedButton.icon(
-                      onPressed: () => _locationService.openLocationSettings(),
-                      icon: const Icon(Icons.settings),
-                      label: const Text('Buka GPS'),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _initLocation,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Coba Lagi'),
                     ),
-                  if (_errorState == LocationPermissionState.deniedForever)
-                    ElevatedButton.icon(
-                      onPressed: () => _locationService.openAppSettings(),
-                      icon: const Icon(Icons.app_settings_alt),
-                      label: const Text('Buka Pengaturan'),
-                    ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 12),
+                    if (_errorState == LocationPermissionState.serviceDisabled)
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                        ),
+                        onPressed: () =>
+                            _locationService.openLocationSettings(),
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Buka GPS'),
+                      ),
+                    if (_errorState == LocationPermissionState.deniedForever)
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                        ),
+                        onPressed: () => _locationService.openAppSettings(),
+                        icon: const Icon(Icons.app_settings_alt),
+                        label: const Text('Buka Pengaturan'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -528,8 +570,8 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
               FloatingActionButton.small(
                 heroTag: 'recenter_current',
                 tooltip: 'Lokasi Saya (GPS)',
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blue.shade700,
+                backgroundColor: AppColors.surfaceCardElevated,
+                foregroundColor: AppColors.secondary,
                 onPressed: _recenterToCurrent,
                 child: const Icon(Icons.my_location),
               ),
@@ -537,8 +579,8 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
               FloatingActionButton.small(
                 heroTag: 'recenter_workshop',
                 tooltip: 'Bengkel MB-engkelQQ Tanjungpinang',
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.orange.shade800,
+                backgroundColor: AppColors.surfaceCardElevated,
+                foregroundColor: AppColors.primary,
                 onPressed: _recenterToWorkshop,
                 child: const Icon(Icons.build_circle_outlined),
               ),
@@ -548,8 +590,8 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
                 FloatingActionButton.small(
                   heroTag: 'recenter_dest',
                   tooltip: 'Lokasi Tujuan',
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.green.shade800,
+                  backgroundColor: AppColors.surfaceCardElevated,
+                  foregroundColor: AppColors.success,
                   onPressed: _recenterToDestination,
                   child: const Icon(Icons.flag_outlined),
                 ),
@@ -567,162 +609,209 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
   Widget _buildBottomPanel() {
     final isPicker = widget.mode == MapPageMode.picker;
 
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Status baris atas: Jarak / Wilayah Layanan
-            Row(
-              children: [
-                Icon(
-                  _isInsideServiceArea ? Icons.route : Icons.warning_amber,
-                  color: _isInsideServiceArea
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.orange.shade800,
-                  size: 22,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Status baris atas: Jarak / Wilayah Layanan
+          Row(
+            children: [
+              Icon(
+                _isInsideServiceArea ? Icons.route : Icons.warning_amber,
+                color: _isInsideServiceArea
+                    ? AppColors.secondary
+                    : AppColors.error,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isPicker
+                      ? (_isInsideServiceArea
+                            ? 'Jarak ke Bengkel: ${_calculatedDistanceKm != null ? '${_calculatedDistanceKm!.toStringAsFixed(1)} km' : 'Menghitung...'}'
+                            : 'Di Luar Wilayah Layanan')
+                      : 'Jarak Tujuan: ${_calculatedDistanceKm != null ? '${_calculatedDistanceKm!.toStringAsFixed(1)} km' : '-'}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: _isInsideServiceArea
+                        ? AppColors.textPrimary
+                        : AppColors.error,
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    isPicker
-                        ? (_isInsideServiceArea
-                              ? 'Jarak ke Bengkel: ${_calculatedDistanceKm != null ? '${_calculatedDistanceKm!.toStringAsFixed(1)} km' : 'Menghitung...'}'
-                              : 'Di Luar Wilayah Layanan')
-                        : 'Jarak Tujuan: ${_calculatedDistanceKm != null ? '${_calculatedDistanceKm!.toStringAsFixed(1)} km' : '-'}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: _isInsideServiceArea
-                          ? Colors.black87
-                          : Colors.red.shade700,
+              ),
+              if (_isGeocoding)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      AppColors.primary,
                     ),
                   ),
                 ),
-                if (_isGeocoding)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-              ],
-            ),
-            const Divider(height: 16),
+            ],
+          ),
+          const Divider(color: AppColors.borderSubtle, height: 16),
 
-            // Alamat & Koordinat
-            if (isPicker) ...[
-              if (!_isInsideServiceArea) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
+          // Alamat & Koordinat
+          if (isPicker) ...[
+            if (!_isInsideServiceArea) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.warningContainer,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.3),
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.orange.shade800,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      const Expanded(
-                        child: Text(
-                          'Layanan hanya tersedia di Kota Tanjungpinang.',
-                          style: TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: AppColors.warning,
+                      size: 16,
+                    ),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Layanan penjemputan khusus Kota Tanjungpinang.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              Text(
-                'Alamat Pickup Terpilih:',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w600,
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                _selectedAddress.isNotEmpty
-                    ? _selectedAddress
-                    : 'Ketuk peta untuk menentukan titik pickup.',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14),
+              const SizedBox(height: 8),
+            ],
+            const Text(
+              'Alamat Pickup Terpilih:',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
               ),
-              if (_selectedLat != null && _selectedLng != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  'Koordinat: ${_selectedLat!.toStringAsFixed(5)}, ${_selectedLng!.toStringAsFixed(5)}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                ),
-              ],
-              const SizedBox(height: 14),
-              ElevatedButton.icon(
-                onPressed: _selectedLat == null
-                    ? null
-                    : () {
-                        if (!_isInsideServiceArea) {
-                          _showOutOfAreaDialog();
-                          return;
-                        }
-
-                        final result = MapPickerResult(
-                          latitude: _selectedLat!,
-                          longitude: _selectedLng!,
-                          address: _selectedAddress,
-                          distanceKm: _calculatedDistanceKm ?? 0.0,
-                          isInsideServiceArea: true,
-                        );
-                        Navigator.of(context).pop(result);
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isInsideServiceArea ? null : Colors.grey,
-                ),
-                icon: const Icon(Icons.check_circle_outline),
-                label: Text(
-                  _isInsideServiceArea
-                      ? 'Gunakan Lokasi Ini'
-                      : 'Lokasi di Luar Jangkauan',
-                ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              _selectedAddress.isNotEmpty
+                  ? _selectedAddress
+                  : 'Ketuk pada peta untuk menentukan titik pickup.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary,
               ),
-            ] else ...[
+            ),
+            if (_selectedLat != null && _selectedLng != null) ...[
+              const SizedBox(height: 3),
               Text(
-                widget.destinationTitle ?? 'Lokasi Tujuan',
+                'Lat: ${_selectedLat!.toStringAsFixed(5)}, Lng: ${_selectedLng!.toStringAsFixed(5)}',
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  color: AppColors.textMuted,
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.destinationAddress ??
-                    'Koordinat: ${widget.destinationLatitude?.toStringAsFixed(5) ?? '-'}, ${widget.destinationLongitude?.toStringAsFixed(5) ?? '-'}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13),
-              ),
-              const SizedBox(height: 14),
-              ElevatedButton.icon(
-                onPressed: _launchNavigationToDestination,
-                icon: const Icon(Icons.navigation_outlined),
-                label: const Text('Buka Navigasi (Google Maps)'),
               ),
             ],
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: _selectedLat == null
+                  ? null
+                  : () {
+                      if (!_isInsideServiceArea) {
+                        _showOutOfAreaDialog();
+                        return;
+                      }
+
+                      final result = MapPickerResult(
+                        latitude: _selectedLat!,
+                        longitude: _selectedLng!,
+                        address: _selectedAddress,
+                        distanceKm: _calculatedDistanceKm ?? 0.0,
+                        isInsideServiceArea: true,
+                      );
+                      Navigator.of(context).pop(result);
+                    },
+              style: FilledButton.styleFrom(
+                backgroundColor: _isInsideServiceArea
+                    ? AppColors.primary
+                    : AppColors.textDisabled,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.check_circle_outline, size: 18),
+              label: Text(
+                _isInsideServiceArea
+                    ? 'Gunakan Lokasi Ini'
+                    : 'Lokasi di Luar Jangkauan',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ] else ...[
+            Text(
+              widget.destinationTitle ?? 'Lokasi Tujuan',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              widget.destinationAddress ??
+                  'Koordinat: ${widget.destinationLatitude?.toStringAsFixed(5) ?? '-'}, ${widget.destinationLongitude?.toStringAsFixed(5) ?? '-'}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: _launchNavigationToDestination,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.navigation_outlined, size: 18),
+              label: const Text(
+                'Buka Navigasi (Google Maps)',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

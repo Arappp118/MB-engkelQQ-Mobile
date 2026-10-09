@@ -4,6 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_buttons.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../models/payment.dart';
 import '../../../models/service_order.dart';
 import '../../../providers/payment_provider.dart';
@@ -45,7 +49,6 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
 
     if (fileSize > 2 * 1024 * 1024) {
       _showMessage('Ukuran bukti pembayaran maksimal 2 MB.');
-
       return;
     }
 
@@ -96,18 +99,42 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Pembayaran Berhasil'),
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          icon: const Icon(
+            Icons.check_circle_rounded,
+            color: AppColors.success,
+            size: 48,
+          ),
+          title: const Text(
+            'Pembayaran Berhasil Dikirim',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
           content: Text(
             payment?.id != null
                 ? 'Pembayaran #${payment!.id} berhasil dikirim dan menunggu verifikasi admin.'
                 : 'Pembayaran berhasil dikirim dan menunggu verifikasi admin.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textSecondary),
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
+            Center(
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  minimumSize: const Size(120, 44),
+                ),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('OK'),
+              ),
             ),
           ],
         );
@@ -116,8 +143,12 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.surfaceCardElevated,
+      ),
+    );
   }
 
   @override
@@ -128,45 +159,138 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
         _selectedMethod == 'transfer' || _selectedMethod == 'qris';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pembayaran')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Konfirmasi Pembayaran'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const SectionHeader(
+            title: 'Tagihan Servis',
+            subtitle: 'Rincian total biaya yang harus dibayarkan',
+          ),
           _buildOrderSummary(order),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          const SectionHeader(
+            title: 'Metode Pembayaran',
+            subtitle: 'Pilih salah satu metode pembayaran yang tersedia',
+          ),
           _buildPaymentMethod(isProofRequired),
-          const SizedBox(height: 16),
-          if (isProofRequired) _buildProofSection(),
-          if (isProofRequired) const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          if (isProofRequired) ...[
+            const SectionHeader(
+              title: 'Upload Bukti Bayar',
+              subtitle: 'Lampirkan foto/struk transfer atau QRIS',
+            ),
+            _buildProofSection(),
+            const SizedBox(height: 24),
+          ],
           _buildSubmitSection(provider.isLoading),
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
   Widget _buildOrderSummary(ServiceOrder order) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Order #${order.id}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  'Tagihan Aktif',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(color: AppColors.borderSubtle),
+          const SizedBox(height: 8),
+          _InfoRow(
+            label: 'Subtotal Jasa & Part',
+            value: _formatCurrency(order.subtotal),
+          ),
+          _InfoRow(
+            label: 'Biaya Penjemputan (Pickup)',
+            value: _formatCurrency(order.deliveryFee),
+          ),
+          const Divider(color: AppColors.borderSubtle, height: 20),
+          _InfoRow(
+            label: 'Total Tagihan',
+            value: _formatCurrency(order.grandTotal),
+            bold: true,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethod(bool isProofRequired) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(8),
+      child: RadioGroup<String>(
+        groupValue: _selectedMethod,
+        onChanged: (val) {
+          if (val != null) {
+            setState(() {
+              _selectedMethod = val;
+              if (val == 'cash') {
+                _proofPath = null;
+                _proofName = null;
+              }
+            });
+          }
+        },
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Detail Pembayaran',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            _buildMethodTile(
+              value: 'cash',
+              title: 'Bayar Tunai (Cash)',
+              subtitle: 'Bayar langsung ke kasir bengkel atau kurir pickup.',
+              icon: Icons.payments_outlined,
             ),
-            const SizedBox(height: 14),
-            _InfoRow(label: 'Service Order', value: '#${order.id}'),
-            _InfoRow(label: 'Subtotal', value: _formatCurrency(order.subtotal)),
-            _InfoRow(
-              label: 'Biaya Pickup',
-              value: _formatCurrency(order.deliveryFee),
+            const Divider(color: AppColors.borderSubtle, height: 1),
+            _buildMethodTile(
+              value: 'transfer',
+              title: 'Transfer Bank',
+              subtitle: 'BCA / Mandiri / BNI. Upload struk bukti transfer.',
+              icon: Icons.account_balance_outlined,
             ),
-            const Divider(height: 24),
-            _InfoRow(
-              label: 'Total',
-              value: _formatCurrency(order.grandTotal),
-              bold: true,
+            const Divider(color: AppColors.borderSubtle, height: 1),
+            _buildMethodTile(
+              value: 'qris',
+              title: 'QRIS (Gopay/OVO/Dana/BCA)',
+              subtitle: 'Pindai barcode QRIS dan upload tangkapan layar bukti.',
+              icon: Icons.qr_code_2_rounded,
             ),
           ],
         ),
@@ -174,63 +298,79 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
     );
   }
 
-  Widget _buildPaymentMethod(bool isProofRequired) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildMethodTile({
+    required String value,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedMethod == value;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedMethod = value;
+          if (value == 'cash') {
+            _proofPath = null;
+            _proofName = null;
+          }
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primaryContainer.withValues(alpha: 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
           children: [
-            const Text(
-              'Metode Pembayaran',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primaryContainer
+                    : AppColors.surfaceCardElevated,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              ),
             ),
-            const SizedBox(height: 10),
-            RadioGroup<String>(
-              groupValue: _selectedMethod,
-              onChanged: (value) {
-                if (value == null) return;
-
-                setState(() {
-                  _selectedMethod = value;
-
-                  if (value == 'cash') {
-                    _proofPath = null;
-                    _proofName = null;
-                  }
-                });
-              },
-              child: const Column(
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    value: 'cash',
-                    title: Text('Cash'),
-                    subtitle: Text('Bayar secara tunai.'),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w600,
+                      color: isSelected
+                          ? AppColors.primaryLight
+                          : AppColors.textPrimary,
+                    ),
                   ),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    value: 'transfer',
-                    title: Text('Transfer'),
-                    subtitle: Text('Upload bukti transfer.'),
-                  ),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    value: 'qris',
-                    title: Text('QRIS'),
-                    subtitle: Text('Upload bukti pembayaran QRIS.'),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-            if (isProofRequired)
-              const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: Text(
-                  'Bukti pembayaran wajib untuk Transfer dan QRIS.',
-                  style: TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-              ),
+            Radio<String>(value: value, activeColor: AppColors.primary),
           ],
         ),
       ),
@@ -238,53 +378,74 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
   }
 
   Widget _buildProofSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Bukti Pembayaran',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Lampiran Bukti Pembayaran',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Format: JPG, JPEG, PNG, atau PDF. '
-              'Maksimal 2 MB.',
-              style: TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: _pickProof,
-              icon: const Icon(Icons.upload_file),
-              label: Text(
-                _proofName == null ? 'Pilih Bukti Pembayaran' : 'Ganti File',
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Format yang didukung: JPG, PNG, PDF (Maks. 2 MB)',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          SecondaryButton(
+            text: _proofName == null ? 'Pilih File Bukti' : 'Ganti File',
+            icon: Icons.upload_file_rounded,
+            onPressed: _pickProof,
+          ),
+          if (_proofName != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCardElevated,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
               ),
-            ),
-            if (_proofName != null) ...[
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  const Icon(Icons.insert_drive_file_outlined, size: 20),
+                  const Icon(
+                    Icons.check_circle_outline,
+                    color: AppColors.success,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
-                  Expanded(child: Text(_proofName!)),
+                  Expanded(
+                    child: Text(
+                      _proofName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
                   IconButton(
                     tooltip: 'Hapus file',
+                    icon: const Icon(Icons.close, size: 18),
+                    color: AppColors.textMuted,
                     onPressed: () {
                       setState(() {
                         _proofPath = null;
                         _proofName = null;
                       });
                     },
-                    icon: const Icon(Icons.close),
                   ),
                 ],
               ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -292,27 +453,17 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
   Widget _buildSubmitSection(bool isLoading) {
     return Column(
       children: [
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: isLoading ? null : _submitPayment,
-            icon: isLoading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.payment),
-            label: Text(
-              isLoading ? 'Mengirim Pembayaran...' : 'Kirim Pembayaran',
-            ),
-          ),
+        PrimaryButton(
+          text: isLoading ? 'Mengirim Pembayaran...' : 'Kirim Pembayaran',
+          icon: Icons.payment_rounded,
+          isLoading: isLoading,
+          onPressed: isLoading ? null : _submitPayment,
         ),
         const SizedBox(height: 8),
         const Text(
-          'Pembayaran akan menunggu verifikasi admin.',
+          'Pembayaran akan segera diverifikasi oleh tim admin bengkel.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey, fontSize: 13),
+          style: TextStyle(color: AppColors.textMuted, fontSize: 12),
         ),
       ],
     );
@@ -347,18 +498,27 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-      fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-      fontSize: bold ? 16 : 14,
-    );
-
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          SizedBox(width: 120, child: Text(label, style: style)),
-          Expanded(child: Text(value, style: style)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: bold ? 15 : 13,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+              color: bold ? AppColors.textPrimary : AppColors.textSecondary,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: bold ? 18 : 13,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+              color: bold ? AppColors.primary : AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );

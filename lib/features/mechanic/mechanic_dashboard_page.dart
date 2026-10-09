@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_buttons.dart';
+import '../../core/widgets/app_states.dart';
+import '../../core/widgets/premium_card.dart';
+import '../../core/widgets/stat_card.dart';
+import '../../core/widgets/status_badge.dart';
 import '../../models/service_order.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/service_order_provider.dart';
@@ -36,6 +42,7 @@ class _MechanicDashboardPageState extends State<MechanicDashboardPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(provider.errorMessage ?? 'Gagal memuat service order.'),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -46,16 +53,34 @@ class _MechanicDashboardPageState extends State<MechanicDashboardPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text('Apakah Anda yakin ingin logout?'),
+          backgroundColor: AppColors.surfaceCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          title: const Text(
+            'Logout',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          content: const Text(
+            'Apakah Anda yakin ingin logout?',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop(false);
               },
-              child: const Text('Batal'),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             ),
-            ElevatedButton(
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 Navigator.of(dialogContext).pop(true);
               },
@@ -82,6 +107,7 @@ class _MechanicDashboardPageState extends State<MechanicDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Mechanic Dashboard'),
         actions: [
@@ -95,110 +121,158 @@ class _MechanicDashboardPageState extends State<MechanicDashboardPage> {
           IconButton(
             tooltip: 'Logout',
             onPressed: _logout,
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: AppColors.error),
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: 0,
+        backgroundColor: AppColors.surface,
+        indicatorColor: AppColors.primaryContainer,
+        onDestinationSelected: (index) {
+          switch (index) {
+            case 0:
+              break;
+            case 1:
+              context.push('/notifications');
+              break;
+            case 2:
+              _logout();
+              break;
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.build_outlined),
+            selectedIcon: Icon(Icons.build, color: AppColors.primary),
+            label: 'Pekerjaan',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_outlined),
+            selectedIcon: Icon(Icons.notifications, color: AppColors.primary),
+            label: 'Notifikasi',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: AppColors.primary),
+            label: 'Akun',
           ),
         ],
       ),
       body: Consumer<ServiceOrderProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && provider.serviceOrders.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(message: 'Memuat data pekerjaan...');
           }
 
           if (provider.errorMessage != null && provider.serviceOrders.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: _loadServiceOrders,
-              child: ListView(
-                children: [
-                  const SizedBox(height: 220),
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          const Icon(Icons.error_outline, size: 56),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Gagal memuat Service Order',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            provider.errorMessage!,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: _loadServiceOrders,
-                            child: const Text('Coba Lagi'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            return ErrorState(
+              title: 'Gagal memuat Service Order',
+              message: provider.errorMessage!,
+              onRetry: _loadServiceOrders,
             );
           }
 
           if (provider.serviceOrders.isEmpty) {
             return RefreshIndicator(
               onRefresh: _loadServiceOrders,
+              color: AppColors.primary,
               child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
-                  SizedBox(height: 250),
-                  Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.build_circle_outlined, size: 64),
-                        SizedBox(height: 16),
-                        Text(
-                          'Belum ada Service Order',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Service Order yang ditugaskan kepada mechanic akan muncul di sini.',
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                  SizedBox(height: 120),
+                  EmptyState(
+                    icon: Icons.build_circle_outlined,
+                    title: 'Belum ada Service Order',
+                    message: 'Service Order yang ditugaskan kepada mechanic akan muncul di sini.',
                   ),
                 ],
               ),
             );
           }
 
+          final orders = provider.serviceOrders;
+          final inProgressCount = orders
+              .where(
+                (o) => o.status == 'in_progress' || o.status == 'in_service',
+              )
+              .length;
+          final assignedCount = orders
+              .where((o) => o.status == 'assigned')
+              .length;
+          final completedCount = orders
+              .where((o) => o.status == 'completed' || o.status == 'paid')
+              .length;
+
           return RefreshIndicator(
             onRefresh: _loadServiceOrders,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: provider.serviceOrders.length,
-              itemBuilder: (context, index) {
-                final order = provider.serviceOrders[index];
-
-                return _ServiceOrderCard(
-                  order: order,
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            MechanicServiceDetailPage(serviceOrderId: order.id),
+            color: AppColors.primary,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              children: [
+                // Quick Summary Header
+                Row(
+                  children: [
+                    Expanded(
+                      child: StatCard(
+                        title: 'Antrean',
+                        value: '$assignedCount',
+                        icon: Icons.assignment_outlined,
+                        accentColor: AppColors.info,
                       ),
-                    );
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: StatCard(
+                        title: 'Dikerjakan',
+                        value: '$inProgressCount',
+                        icon: Icons.timelapse,
+                        accentColor: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: StatCard(
+                        title: 'Selesai',
+                        value: '$completedCount',
+                        icon: Icons.check_circle_outline,
+                        accentColor: AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Daftar Pekerjaan',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...orders.map((order) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ServiceOrderCard(
+                      order: order,
+                      onTap: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MechanicServiceDetailPage(
+                              serviceOrderId: order.id,
+                            ),
+                          ),
+                        );
 
-                    if (mounted) {
-                      await _loadServiceOrders();
-                    }
-                  },
-                );
-              },
+                        if (mounted) {
+                          await _loadServiceOrders();
+                        }
+                      },
+                    ),
+                  );
+                }),
+              ],
             ),
           );
         },
@@ -221,72 +295,56 @@ class _ServiceOrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = order.status ?? '-';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFDFC7),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.build, size: 30),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Service Order #${order.id}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                child: const Icon(
+                  Icons.build_rounded,
+                  size: 22,
+                  color: AppColors.primary,
                 ),
-                _StatusBadge(status: status),
-              ],
-            ),
-
-            const SizedBox(height: 18),
-
-            _InfoRow(label: 'Booking', value: '${order.bookingId ?? '-'}'),
-
-            const SizedBox(height: 8),
-
-            _InfoRow(label: 'Customer', value: '${order.customerId ?? '-'}'),
-
-            const SizedBox(height: 8),
-
-            _InfoRow(label: 'Mechanic', value: '${order.mechanicId ?? '-'}'),
-
-            const SizedBox(height: 18),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onTap,
-                icon: const Icon(Icons.arrow_forward),
-                label: const Text('Lihat Detail'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF9A5C0F),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Service Order #${order.id}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+              StatusBadge(status: status),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 12),
+          _InfoRow(label: 'Booking', value: '${order.bookingId ?? '-'}'),
+          _InfoRow(label: 'Customer', value: '${order.customerId ?? '-'}'),
+          _InfoRow(label: 'Mechanic', value: '${order.mechanicId ?? '-'}'),
+          if (order.diagnosis != null && order.diagnosis!.trim().isNotEmpty)
+            _InfoRow(label: 'Diagnosis', value: order.diagnosis!),
+          const SizedBox(height: 14),
+          PrimaryButton(
+            text: 'Lihat Detail',
+            icon: Icons.arrow_forward,
+            onPressed: onTap,
+            height: 44,
+          ),
+        ],
       ),
     );
   }
@@ -304,40 +362,33 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 82,
-          child: Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 86,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
+            ),
           ),
-        ),
-        Expanded(child: Text(value)),
-      ],
-    );
-  }
-}
-
-// ============================================================
-// STATUS BADGE
-// ============================================================
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDFC7),
-        borderRadius: BorderRadius.circular(20),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
       ),
-      child: Text(status, style: const TextStyle(fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -389,6 +440,7 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
           content: Text(
             provider.errorMessage ?? 'Gagal memuat detail Service Order.',
           ),
+          backgroundColor: AppColors.error,
         ),
       );
       return;
@@ -414,12 +466,16 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Service berhasil dimulai.')),
+        const SnackBar(
+          content: Text('Service berhasil dimulai.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(provider.errorMessage ?? 'Gagal memulai service.'),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -430,7 +486,10 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
 
     if (diagnosis.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Diagnosis tidak boleh kosong.')),
+        const SnackBar(
+          content: Text('Diagnosis tidak boleh kosong.'),
+          backgroundColor: AppColors.warning,
+        ),
       );
       return;
     }
@@ -448,12 +507,16 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Diagnosis berhasil disimpan.')),
+        const SnackBar(
+          content: Text('Diagnosis berhasil disimpan.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(provider.errorMessage ?? 'Gagal menyimpan diagnosis.'),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -468,10 +531,6 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
       return;
     }
 
-    // --------------------------------------------------------
-    // CEK DIAGNOSIS
-    // --------------------------------------------------------
-
     final hasDiagnosis =
         order.diagnosis != null && order.diagnosis!.trim().isNotEmpty;
 
@@ -481,14 +540,11 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
           content: Text(
             'Diagnosis mekanik harus diisi sebelum menyelesaikan service.',
           ),
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
     }
-
-    // --------------------------------------------------------
-    // CEK SERVICE ITEM
-    // --------------------------------------------------------
 
     if (order.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -496,6 +552,7 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
           content: Text(
             'Belum ada tindakan/service item pada Service Order ini. Service belum dapat diselesaikan melalui aplikasi mobile.',
           ),
+          backgroundColor: AppColors.warning,
           duration: Duration(seconds: 4),
         ),
       );
@@ -510,14 +567,13 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Service berhasil diselesaikan.')),
+        const SnackBar(
+          content: Text('Service berhasil diselesaikan.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } else {
       final error = provider.errorMessage ?? 'Gagal menyelesaikan service.';
-
-      // ------------------------------------------------------
-      // HANDLE BR-012 SECARA RAMAH
-      // ------------------------------------------------------
 
       if (error.toLowerCase().contains('br-012')) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -525,12 +581,14 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
             content: Text(
               'Service belum dapat diselesaikan karena diagnosis atau service item belum lengkap.',
             ),
+            backgroundColor: AppColors.warning,
             duration: Duration(seconds: 4),
           ),
         );
       } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), backgroundColor: AppColors.error),
+        );
       }
     }
   }
@@ -538,147 +596,146 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Detail Service')),
       body: Consumer<ServiceOrderProvider>(
         builder: (context, provider, child) {
           final order = provider.selectedServiceOrder;
 
           if (provider.isLoading && order == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(
+              message: 'Memuat detail service order...',
+            );
           }
 
           if (order == null) {
             return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Service Order tidak ditemukan.'),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: _loadServiceOrder,
-                    child: const Text('Coba Lagi'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Service Order tidak ditemukan.',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+                    PrimaryButton(
+                      text: 'Coba Lagi',
+                      onPressed: _loadServiceOrder,
+                      width: 140,
+                    ),
+                  ],
+                ),
               ),
             );
           }
 
           final status = order.status ?? '';
 
-          // Backend saat ini menggunakan
-          // status "in_progress".
-          //
-          // "in_service" tetap diterima
-          // sebagai kompatibilitas jika
-          // ada data lama.
-
           final isAssigned = status == 'assigned';
-
           final isInProgress =
               status == 'in_progress' || status == 'in_service';
-
           final isCompleted = status == 'completed';
 
           final hasDiagnosis =
               order.diagnosis != null && order.diagnosis!.trim().isNotEmpty;
-
           final hasServiceItems = order.items.isNotEmpty;
 
           final canStart = isAssigned;
-
           final canComplete = isInProgress && hasDiagnosis && hasServiceItems;
 
           return RefreshIndicator(
             onRefresh: _loadServiceOrder,
+            color: AppColors.primary,
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 // ==================================================
                 // DETAIL SERVICE ORDER
                 // ==================================================
-
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFDFC7),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(Icons.build, size: 30),
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryContainer,
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Service Order #${order.id}',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        _DetailRow(
-                          label: 'Booking ID',
-                          value: '${order.bookingId ?? '-'}',
-                        ),
-
-                        _DetailRow(
-                          label: 'Customer ID',
-                          value: '${order.customerId ?? '-'}',
-                        ),
-
-                        _DetailRow(
-                          label: 'Mechanic ID',
-                          value: '${order.mechanicId ?? '-'}',
-                        ),
-
-                        _DetailRow(label: 'Status', value: order.status ?? '-'),
-
-                        _DetailRow(
-                          label: 'Subtotal',
-                          value: _formatMoney(order.subtotal),
-                        ),
-
-                        _DetailRow(
-                          label: 'Delivery Fee',
-                          value: _formatMoney(order.deliveryFee),
-                        ),
-
-                        _DetailRow(
-                          label: 'Grand Total',
-                          value: _formatMoney(order.grandTotal),
-                        ),
-
-                        if (order.notes != null &&
-                            order.notes!.trim().isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Catatan',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                            child: const Icon(
+                              Icons.build_rounded,
+                              size: 22,
+                              color: AppColors.primary,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(order.notes!),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Service Order #${order.id}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          StatusBadge(status: status),
                         ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 14),
+                      _DetailRow(
+                        label: 'Booking ID',
+                        value: '${order.bookingId ?? '-'}',
+                      ),
+                      _DetailRow(
+                        label: 'Customer ID',
+                        value: '${order.customerId ?? '-'}',
+                      ),
+                      _DetailRow(
+                        label: 'Mechanic ID',
+                        value: '${order.mechanicId ?? '-'}',
+                      ),
+                      _DetailRow(
+                        label: 'Subtotal',
+                        value: _formatMoney(order.subtotal),
+                      ),
+                      _DetailRow(
+                        label: 'Delivery Fee',
+                        value: _formatMoney(order.deliveryFee),
+                      ),
+                      _DetailRow(
+                        label: 'Grand Total',
+                        value: _formatMoney(order.grandTotal),
+                        isBold: true,
+                      ),
+                      if (order.notes != null &&
+                          order.notes!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Catatan:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          order.notes!,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
 
@@ -687,119 +744,157 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
                 // ==================================================
                 // SERVICE ITEM / TINDAKAN SERVICE
                 // ==================================================
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.handyman_outlined),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                'Tindakan Service',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.secondaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.handyman_outlined,
+                              size: 18,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          const Expanded(
+                            child: Text(
+                              'Tindakan Service',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
                               ),
                             ),
-                            Text(
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
                               '${order.items.length} item',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
                               ),
                             ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        if (order.items.isEmpty)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.orange.withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: const Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.warning_amber, color: Colors.orange),
-                                SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    'Belum ada service item/tindakan service pada Service Order ini. Selesaikan Service belum dapat dilakukan.',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        else
-                          Column(
-                            children: order.items.map((item) {
-                              return Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8F8F8),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Icon(
-                                      Icons.check_circle_outline,
-                                      color: Color(0xFF9A5C0F),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            item.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text('Qty: ${item.quantity}'),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Harga: ${_formatMoney(item.price)}',
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Subtotal: ${_formatMoney(item.subtotal)}',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
                           ),
-                      ],
-                    ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const Divider(height: 1, color: AppColors.border),
+                      const SizedBox(height: 12),
+                      if (order.items.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.warningContainer,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: const Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.warning_amber,
+                                color: AppColors.warning,
+                                size: 20,
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Belum ada service item/tindakan service pada Service Order ini. Selesaikan Service belum dapat dilakukan.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Column(
+                          children: order.items.map((item) {
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle_outline,
+                                    color: AppColors.secondary,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Qty: ${item.quantity} × ${_formatMoney(item.price)}',
+                                              style: const TextStyle(
+                                                color: AppColors.textSecondary,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                            Text(
+                                              _formatMoney(item.subtotal),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -808,51 +903,66 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
                 // ==================================================
                 // DIAGNOSIS
                 // ==================================================
-                Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Diagnosis',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryContainer,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.assignment_outlined,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
                           ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        TextField(
-                          controller: _diagnosisController,
-                          minLines: 4,
-                          maxLines: 7,
-                          decoration: InputDecoration(
-                            hintText: 'Masukkan hasil diagnosis...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Diagnosis Mekanik',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _diagnosisController,
+                        minLines: 3,
+                        maxLines: 6,
+                        style: const TextStyle(color: AppColors.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: 'Masukkan hasil diagnosis teknis...',
+                          hintStyle: const TextStyle(
+                            color: AppColors.textMuted,
+                          ),
+                          filled: true,
+                          fillColor: AppColors.inputBackground,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: AppColors.border,
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 12),
-
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: provider.isLoading
-                                ? null
-                                : _saveDiagnosis,
-                            icon: const Icon(Icons.save),
-                            label: const Text('Simpan Diagnosis'),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 14),
+                      PrimaryButton(
+                        text: 'Simpan Diagnosis',
+                        icon: Icons.save_outlined,
+                        isLoading: provider.isLoading,
+                        onPressed: _saveDiagnosis,
+                        height: 44,
+                      ),
+                    ],
                   ),
                 ),
 
@@ -864,43 +974,58 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
                 if (isInProgress &&
                     !isCompleted &&
                     (!hasDiagnosis || !hasServiceItems))
-                  Card(
-                    color: Colors.orange.withValues(alpha: 0.08),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.info_outline, color: Colors.orange),
-                              SizedBox(width: 8),
-                              Text(
-                                'Belum dapat diselesaikan',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-
-                          if (!hasDiagnosis)
-                            const Padding(
-                              padding: EdgeInsets.only(bottom: 6),
-                              child: Text('• Diagnosis mekanik belum diisi.'),
-                            ),
-
-                          if (!hasServiceItems)
-                            const Text(
-                              '• Belum ada service item/tindakan service.',
-                            ),
-                        ],
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningContainer,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.35),
                       ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              color: AppColors.warning,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Belum dapat diselesaikan',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (!hasDiagnosis)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              '• Diagnosis mekanik belum diisi.',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        if (!hasServiceItems)
+                          const Text(
+                            '• Belum ada service item/tindakan service.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
 
@@ -908,21 +1033,12 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
                 // MULAI SERVICE
                 // ==================================================
                 if (canStart)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: provider.isLoading ? null : _startService,
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Mulai Service'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF9A5C0F),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                      ),
-                    ),
+                  PrimaryButton(
+                    text: 'Mulai Service',
+                    icon: Icons.play_arrow,
+                    isLoading: provider.isLoading,
+                    onPressed: _startService,
+                    height: 48,
                   ),
 
                 // ==================================================
@@ -931,21 +1047,31 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
                 if (isInProgress)
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: canComplete
+                            ? AppColors.success
+                            : AppColors.surface,
+                        foregroundColor: canComplete
+                            ? Colors.white
+                            : AppColors.textMuted,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: canComplete
+                                ? AppColors.success
+                                : AppColors.border,
+                          ),
+                        ),
+                      ),
                       onPressed: provider.isLoading || !canComplete
                           ? null
                           : _completeService,
-                      icon: const Icon(Icons.check_circle),
-                      label: const Text('Selesaikan Service'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.grey.shade300,
-                        disabledForegroundColor: Colors.grey.shade600,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
+                      icon: const Icon(Icons.check_circle_outline, size: 20),
+                      label: const Text(
+                        'Selesaikan Service',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -954,29 +1080,35 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
                 // COMPLETED
                 // ==================================================
                 if (isCompleted)
-                  Card(
+                  Container(
                     margin: const EdgeInsets.only(top: 4),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.check_circle,
-                            color: Colors.green,
-                            size: 30,
-                          ),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Text(
-                              'Service telah selesai.',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.successContainer,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: AppColors.success,
+                          size: 26,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Service telah selesai.',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -994,7 +1126,15 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
       return '-';
     }
 
-    return 'Rp ${value.toStringAsFixed(0)}';
+    final rounded = value.round().toString();
+    final buffer = StringBuffer();
+    for (var i = 0; i < rounded.length; i++) {
+      if (i > 0 && (rounded.length - i) % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(rounded[i]);
+    }
+    return 'Rp ${buffer.toString()}';
   }
 }
 
@@ -1003,15 +1143,20 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
 // ============================================================
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.isBold = false,
+  });
 
   final String label;
   final String value;
+  final bool isBold;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1019,10 +1164,23 @@ class _DetailRow extends StatelessWidget {
             width: 110,
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                color: AppColors.textSecondary,
+                fontSize: 13,
+              ),
             ),
           ),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: isBold ? AppColors.primary : AppColors.textPrimary,
+                fontSize: 13,
+              ),
+            ),
+          ),
         ],
       ),
     );

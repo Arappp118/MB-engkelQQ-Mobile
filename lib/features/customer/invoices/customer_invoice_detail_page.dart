@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_buttons.dart';
+import '../../../core/widgets/app_states.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../models/invoice.dart';
 import '../../../providers/invoice_provider.dart';
 import '../service_orders/customer_service_order_detail_page.dart';
@@ -31,65 +36,83 @@ class _CustomerInvoiceDetailPageState extends State<CustomerInvoiceDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail Invoice')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Detail Invoice'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
+      ),
       body: Consumer<InvoiceProvider>(
         builder: (context, provider, _) {
           final invoice = provider.selectedInvoice;
 
           if (provider.isLoading && invoice == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(
+              height: 350,
+              message: 'Memuat data faktur...',
+            );
           }
 
           if (provider.errorMessage != null && invoice == null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.cloud_off_outlined, size: 60),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Invoice tidak dapat dimuat',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(provider.errorMessage!, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _refresh,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Coba Lagi'),
-                    ),
-                  ],
-                ),
-              ),
+            return ErrorState(
+              title: 'Invoice Tidak Dapat Dimuat',
+              message: provider.errorMessage!,
+              onRetry: _refresh,
             );
           }
 
           if (invoice == null) {
-            return const Center(child: Text('Data invoice tidak ditemukan.'));
+            return const Center(
+              child: EmptyState(
+                title: 'Data Tidak Ditemukan',
+                message: 'Data invoice untuk pesanan servis ini tidak ada.',
+              ),
+            );
           }
 
           return RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.surfaceCard,
             onRefresh: _refresh,
             child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
                 _InvoiceHeaderCard(
                   invoice: invoice,
                   serviceOrderId: widget.serviceOrderId,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Informasi Pelanggan',
+                  subtitle: 'Data kepemilikan dan kendaraan bermotor',
+                ),
                 _CustomerVehicleCard(invoice: invoice),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Rincian Servis & Sparepart',
+                  subtitle: 'Komponen yang diperbaiki atau diganti',
+                ),
                 _InvoiceItemsCard(invoice: invoice),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Rincian Pembayaran',
+                  subtitle: 'Total kalkulasi biaya resmi',
+                ),
                 _InvoiceCostSummaryCard(invoice: invoice),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Status & Metode',
+                  subtitle: 'Status verifikasi transaksi keuangan',
+                ),
                 _InvoicePaymentCard(invoice: invoice),
                 const SizedBox(height: 24),
-                OutlinedButton.icon(
+                SecondaryButton(
+                  text: 'Lihat Detail Servis',
+                  icon: Icons.build_outlined,
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -99,10 +122,8 @@ class _CustomerInvoiceDetailPageState extends State<CustomerInvoiceDetailPage> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.build_outlined),
-                  label: const Text('Lihat Detail Servis'),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
               ],
             ),
           );
@@ -123,61 +144,92 @@ class _InvoiceHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
+    return PremiumCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryLight],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
                   Icons.receipt_long,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 28,
+                  color: Colors.white,
+                  size: 24,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    invoice.invoiceNumber,
-                    style: Theme.of(context).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green),
-                  ),
-                  child: const Text(
-                    'COMPLETED',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invoice.invoiceNumber,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.3,
+                      ),
                     ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'FAKTUR RESMI BENGKEL',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryLight,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.successContainer,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.4),
                   ),
                 ),
-              ],
-            ),
-            const Divider(height: 24),
-            _DetailRow(label: 'Service Order ID', value: '#$serviceOrderId'),
-            if (invoice.nomorBooking != null) ...[
-              const SizedBox(height: 8),
-              _DetailRow(label: 'Nomor Booking', value: invoice.nomorBooking!),
+                child: const Text(
+                  'COMPLETED',
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
             ],
-            if (invoice.tanggal != null) ...[
-              const SizedBox(height: 8),
-              _DetailRow(label: 'Tanggal', value: invoice.tanggal!),
-            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: AppColors.borderSubtle, height: 1),
+          const SizedBox(height: 12),
+          _DetailRow(label: 'Service Order ID', value: '#$serviceOrderId'),
+          if (invoice.nomorBooking != null) ...[
+            const SizedBox(height: 8),
+            _DetailRow(label: 'Nomor Booking', value: invoice.nomorBooking!),
           ],
-        ),
+          if (invoice.tanggal != null) ...[
+            const SizedBox(height: 8),
+            _DetailRow(label: 'Tanggal', value: invoice.tanggal!),
+          ],
+        ],
       ),
     );
   }
@@ -195,34 +247,47 @@ class _CustomerVehicleCard extends StatelessWidget {
       if (invoice.vehicleModel != null) invoice.vehicleModel,
     ].join(' ');
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Informasi Pelanggan & Kendaraan',
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Divider(height: 20),
-            if (invoice.customerName != null)
-              _DetailRow(label: 'Pelanggan', value: invoice.customerName!),
-            if (invoice.customerEmail != null) ...[
-              const SizedBox(height: 8),
-              _DetailRow(label: 'Email', value: invoice.customerEmail!),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.person_pin_outlined,
+                size: 18,
+                color: AppColors.secondary,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Informasi Pelanggan & Kendaraan',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
             ],
-            if (invoice.vehiclePlate != null) ...[
-              const SizedBox(height: 8),
-              _DetailRow(label: 'Plat Nomor', value: invoice.vehiclePlate!),
-            ],
-            if (vehicleDesc.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _DetailRow(label: 'Kendaraan', value: vehicleDesc),
-            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: AppColors.borderSubtle, height: 1),
+          const SizedBox(height: 10),
+          if (invoice.customerName != null)
+            _DetailRow(label: 'Pelanggan', value: invoice.customerName!),
+          if (invoice.customerEmail != null) ...[
+            const SizedBox(height: 8),
+            _DetailRow(label: 'Email', value: invoice.customerEmail!),
           ],
-        ),
+          if (invoice.vehiclePlate != null) ...[
+            const SizedBox(height: 8),
+            _DetailRow(label: 'Plat Nomor', value: invoice.vehiclePlate!),
+          ],
+          if (vehicleDesc.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _DetailRow(label: 'Kendaraan', value: vehicleDesc),
+          ],
+        ],
       ),
     );
   }
@@ -237,64 +302,88 @@ class _InvoiceItemsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = invoice.items;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Rincian Item & Servis',
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Divider(height: 20),
-            if (items.isEmpty)
-              const Text('Tidak ada item tercatat.')
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: items.length,
-                separatorBuilder: (context, index) => const Divider(height: 16),
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${item.quantity} x ${_formatCurrency(item.price)}',
-                              style: TextStyle(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        _formatCurrency(item.subtotal),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  );
-                },
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.inventory_2_outlined,
+                size: 18,
+                color: AppColors.secondary,
               ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              const Text(
+                'Rincian Item & Servis',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: AppColors.borderSubtle, height: 1),
+          const SizedBox(height: 6),
+          if (items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Tidak ada item tercatat.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              separatorBuilder: (context, index) =>
+                  const Divider(color: AppColors.borderSubtle, height: 16),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${item.quantity} x ${_formatCurrency(item.price)}',
+                            style: const TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      _formatCurrency(item.subtotal),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -307,47 +396,43 @@ class _InvoiceCostSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ringkasan Biaya',
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Divider(height: 20),
-            _DetailRow(
-              label: 'Subtotal Item',
-              value: _formatCurrency(invoice.subtotal),
-            ),
-            const SizedBox(height: 8),
-            _DetailRow(
-              label: 'Biaya Pengiriman/Pickup',
-              value: _formatCurrency(invoice.deliveryFee),
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Grand Total',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _DetailRow(
+            label: 'Subtotal Item',
+            value: _formatCurrency(invoice.subtotal),
+          ),
+          const SizedBox(height: 8),
+          _DetailRow(
+            label: 'Biaya Pengiriman/Pickup',
+            value: _formatCurrency(invoice.deliveryFee),
+          ),
+          const Divider(color: AppColors.borderSubtle, height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Grand Total',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
-                Text(
-                  _formatCurrency(invoice.grandTotal),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+              ),
+              Text(
+                _formatCurrency(invoice.grandTotal),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -360,31 +445,41 @@ class _InvoicePaymentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Informasi Pembayaran',
-              style: Theme.of(context).textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const Divider(height: 20),
-            _DetailRow(
-              label: 'Status Pembayaran',
-              value: (invoice.paymentStatus ?? 'Belum ada').toUpperCase(),
-            ),
-            if (invoice.paymentMethod != null) ...[
-              const SizedBox(height: 8),
-              _DetailRow(
-                label: 'Metode Pembayaran',
-                value: invoice.paymentMethod!.toUpperCase(),
+    final statusText = (invoice.paymentStatus ?? 'Belum ada').toUpperCase();
+    final methodText = (invoice.paymentMethod ?? '-').toUpperCase();
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.credit_card_outlined,
+                size: 18,
+                color: AppColors.secondary,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Informasi Pembayaran',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: AppColors.borderSubtle, height: 1),
+          const SizedBox(height: 10),
+          _DetailRow(label: 'Status Pembayaran', value: statusText),
+          if (invoice.paymentMethod != null) ...[
+            const SizedBox(height: 8),
+            _DetailRow(label: 'Metode Pembayaran', value: methodText),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -403,11 +498,16 @@ class _DetailRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: AppColors.textPrimary,
           ),
         ),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     );
   }

@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'bookings/customer_bookings_page.dart';
-import 'invoices/customer_invoices_page.dart';
-import 'vehicles/customer_vehicles_page.dart';
-import '../notifications/notification_center_page.dart';
-
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_buttons.dart';
+import '../../core/widgets/app_header.dart';
+import '../../core/widgets/app_states.dart';
+import '../../core/widgets/confirmation_dialog.dart';
+import '../../core/widgets/premium_card.dart';
+import '../../core/widgets/section_header.dart';
+import '../../core/widgets/service_status_timeline.dart';
+import '../../core/widgets/stat_card.dart';
+import '../../core/widgets/status_badge.dart';
 import '../../models/dashboard.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/notification_provider.dart';
+import 'bookings/customer_booking_detail_page.dart';
+import 'bookings/customer_bookings_page.dart';
+import 'bookings/customer_create_booking_page.dart';
+import 'invoices/customer_invoices_page.dart';
+import 'vehicles/customer_vehicles_page.dart';
+import '../notifications/notification_center_page.dart';
 
 class CustomerDashboardPage extends StatefulWidget {
   const CustomerDashboardPage({super.key});
@@ -19,6 +30,8 @@ class CustomerDashboardPage extends StatefulWidget {
 }
 
 class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
+  final int _currentNavIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +51,144 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   }
 
   Future<void> _logout() async {
-    await context.read<AuthProvider>().logout();
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Konfirmasi Logout',
+      content: 'Apakah Anda yakin ingin keluar dari akun ini?',
+      confirmText: 'Logout',
+      isDestructive: true,
+    );
+
+    if (confirmed == true && mounted) {
+      await context.read<AuthProvider>().logout();
+    }
+  }
+
+  void _onBottomNavTapped(int index) {
+    if (index == _currentNavIndex) return;
+
+    if (index == 1) {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const CustomerVehiclesPage()));
+    } else if (index == 2) {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const CustomerBookingsPage()));
+    } else if (index == 3) {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const CustomerInvoicesPage()));
+    } else if (index == 4) {
+      _showProfileSheet();
+    }
+  }
+
+  void _showProfileSheet() {
+    final auth = context.read<AuthProvider>();
+    final userName = auth.user?['name'] as String? ?? 'Customer';
+    final userEmail = auth.user?['email'] as String? ?? '-';
+    final userPhone = auth.user?['phone'] as String? ?? '-';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryLight],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          userName.isNotEmpty ? userName[0].toUpperCase() : 'C',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            userEmail,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: 8),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.phone_outlined,
+                    color: AppColors.secondary,
+                  ),
+                  title: const Text('No. Handphone'),
+                  subtitle: Text(userPhone),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(
+                    Icons.location_on_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: const Text('Lokasi Layanan'),
+                  subtitle: const Text('Kota Tanjungpinang, Kepulauan Riau'),
+                ),
+                const SizedBox(height: 16),
+                PrimaryButton(
+                  text: 'Logout Akun',
+                  icon: Icons.logout,
+                  backgroundColor: AppColors.error,
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _logout();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -50,61 +200,70 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     final userName = auth.user?['name'] as String? ?? 'Customer';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('MB-engkelQQ'),
-        actions: [
-          IconButton(
-            tooltip: 'Notifikasi',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const NotificationCenterPage(),
-                ),
-              );
-            },
-            icon: Badge(
-              isLabelVisible: notifProvider.unreadCount > 0,
-              label: Text('${notifProvider.unreadCount}'),
-              child: const Icon(Icons.notifications_outlined),
+      backgroundColor: AppColors.background,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(70),
+        child: AppAvatarHeader(
+          name: userName,
+          role: 'Customer',
+          subtitle: 'Pantau servis & rawat motormu',
+          unreadCount: notifProvider.unreadCount,
+          onNotificationTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationCenterPage()),
+            );
+          },
+          actions: [
+            IconButton(
+              tooltip: 'Logout',
+              icon: const Icon(Icons.logout, color: AppColors.textSecondary),
+              onPressed: auth.isAuthenticated ? _logout : null,
             ),
-          ),
-          IconButton(
-            tooltip: 'Invoice Saya',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CustomerInvoicesPage()),
-              );
-            },
-            icon: const Icon(Icons.receipt_long_outlined),
-          ),
-          IconButton(
-            tooltip: 'Booking Saya',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CustomerBookingsPage()),
-              );
-            },
-            icon: const Icon(Icons.calendar_month_outlined),
-          ),
-          IconButton(
-            tooltip: 'Kendaraan Saya',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const CustomerVehiclesPage()),
-              );
-            },
-            icon: const Icon(Icons.two_wheeler_outlined),
-          ),
-          IconButton(
-            tooltip: 'Logout',
-            onPressed: auth.isAuthenticated ? _logout : null,
-            icon: const Icon(Icons.logout),
-          ),
-        ],
+          ],
+        ),
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surfaceCard,
         onRefresh: _refresh,
         child: _buildBody(context, provider, dashboard, userName),
+      ),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentNavIndex,
+          onTap: _onBottomNavTapped,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Beranda',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.two_wheeler_outlined),
+              activeIcon: Icon(Icons.two_wheeler),
+              label: 'Kendaraan',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month_outlined),
+              activeIcon: Icon(Icons.calendar_month),
+              label: 'Booking',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long_outlined),
+              activeIcon: Icon(Icons.receipt_long),
+              label: 'Invoice',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profil',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -119,10 +278,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
-          SizedBox(
-            height: 400,
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          LoadingState(height: 400, message: 'Memuat data dashboard...'),
         ],
       );
     }
@@ -132,20 +288,11 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
-          const SizedBox(height: 80),
-          const Icon(Icons.cloud_off_outlined, size: 60),
-          const SizedBox(height: 16),
-          const Text(
-            'Dashboard tidak dapat dimuat',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(provider.errorMessage!, textAlign: TextAlign.center),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: provider.isLoading ? null : _refresh,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Coba Lagi'),
+          const SizedBox(height: 60),
+          ErrorState(
+            title: 'Dashboard Gagal Dimuat',
+            message: provider.errorMessage!,
+            onRetry: provider.isLoading ? null : _refresh,
           ),
         ],
       );
@@ -155,9 +302,10 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
-          SizedBox(
-            height: 300,
-            child: Center(child: Text('Data dashboard belum tersedia.')),
+          EmptyState(
+            height: 350,
+            title: 'Data Belum Tersedia',
+            message: 'Tarik ke bawah untuk menyegarkan data dashboard.',
           ),
         ],
       );
@@ -165,49 +313,233 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       children: [
-        Text(
-          'Halo, $userName 👋',
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Pantau kendaraan dan layanan servis kamu.',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        // Hero Card
+        _buildHeroBanner(context),
+        const SizedBox(height: 20),
+
+        // Quick Actions
+        _buildQuickActions(context),
         const SizedBox(height: 24),
-        _buildSummaryGrid(dashboard),
+
+        // Summary Stats Grid
+        const SectionHeader(
+          title: 'Ringkasan Aktivitas',
+          subtitle: 'Status menyeluruh akun Anda',
+        ),
+        _buildSummaryGrid(context, dashboard),
         const SizedBox(height: 24),
+
+        // Active service timeline if there are active bookings or active services
+        if ((dashboard.activeBookings ?? 0) > 0 ||
+            (dashboard.activeServiceOrders ?? 0) > 0) ...[
+          const SectionHeader(
+            title: 'Progres Pengerjaan Terkini',
+            subtitle: 'Pantau tahapan servis motor Anda',
+          ),
+          const ServiceStatusTimeline(currentStatus: 'in_progress'),
+          const SizedBox(height: 24),
+        ],
+
+        // Recent Bookings
         _buildRecentBookings(context, dashboard),
         const SizedBox(height: 24),
+
+        // Latest Delivery
         _buildLatestDelivery(context, dashboard),
+        const SizedBox(height: 28),
       ],
     );
   }
 
-  Widget _buildSummaryGrid(Dashboard dashboard) {
+  Widget _buildHeroBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF261D15), Color(0xFF191C24)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.35),
+          width: 1,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: AppColors.primary),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.verified, size: 13, color: AppColors.primary),
+                    SizedBox(width: 4),
+                    Text(
+                      'BENGKEL RESMI TANJUNGPINANG',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryLight,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Servis Motor Cepat & Terpercaya',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Layanan servis berkala, ganti oli, hingga pickup motor langsung dari lokasi Anda.',
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 16),
+          PrimaryButton(
+            text: 'Booking Servis Sekarang',
+            icon: Icons.calendar_today_rounded,
+            height: 46,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const CustomerCreateBookingPage(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final actions = [
+      _QuickActionItem(
+        icon: Icons.add_circle_outline,
+        label: 'Booking',
+        color: AppColors.primary,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const CustomerCreateBookingPage(),
+            ),
+          );
+        },
+      ),
+      _QuickActionItem(
+        icon: Icons.two_wheeler_outlined,
+        label: 'Kendaraan',
+        color: AppColors.secondary,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerVehiclesPage()),
+          );
+        },
+      ),
+      _QuickActionItem(
+        icon: Icons.history_outlined,
+        label: 'Riwayat',
+        color: AppColors.warning,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerBookingsPage()),
+          );
+        },
+      ),
+      _QuickActionItem(
+        icon: Icons.receipt_long_outlined,
+        label: 'Invoice',
+        color: AppColors.info,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerInvoicesPage()),
+          );
+        },
+      ),
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: actions.map((a) => Expanded(child: a)).toList(),
+    );
+  }
+
+  Widget _buildSummaryGrid(BuildContext context, Dashboard dashboard) {
     final cards = [
-      _SummaryCard(
+      StatCard(
         icon: Icons.two_wheeler_outlined,
         title: 'Kendaraan',
         value: '${dashboard.vehiclesCount ?? 0}',
+        accentColor: AppColors.primary,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerVehiclesPage()),
+          );
+        },
       ),
-      _SummaryCard(
+      StatCard(
         icon: Icons.calendar_month_outlined,
         title: 'Booking Aktif',
         value: '${dashboard.activeBookings ?? 0}',
+        accentColor: AppColors.secondary,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerBookingsPage()),
+          );
+        },
       ),
-      _SummaryCard(
+      StatCard(
         icon: Icons.build_outlined,
         title: 'Service Aktif',
         value: '${dashboard.activeServiceOrders ?? 0}',
+        accentColor: AppColors.warning,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerBookingsPage()),
+          );
+        },
       ),
-      _SummaryCard(
+      StatCard(
         icon: Icons.payment_outlined,
         title: 'Pembayaran',
         value: '${dashboard.pendingPayments ?? 0}',
+        accentColor: AppColors.info,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CustomerInvoicesPage()),
+          );
+        },
       ),
     ];
 
@@ -218,7 +550,7 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         crossAxisCount: 2,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
-        mainAxisExtent: 145,
+        mainAxisExtent: 110,
       ),
       itemCount: cards.length,
       itemBuilder: (context, index) => cards[index],
@@ -231,18 +563,21 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Booking Terbaru',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+        SectionHeader(
+          title: 'Booking Terbaru',
+          subtitle: 'Daftar pemesanan servis motor Anda',
+          actionLabel: 'Lihat Semua',
+          onAction: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CustomerBookingsPage()),
+            );
+          },
         ),
-        const SizedBox(height: 12),
         if (bookings == null || bookings.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text('Belum ada booking terbaru.'),
-            ),
+          const EmptyState(
+            icon: Icons.calendar_today_outlined,
+            title: 'Belum Ada Booking',
+            message: 'Mulai servis motor Anda sekarang dengan mudah.',
           )
         else
           ...bookings.take(3).map((booking) {
@@ -252,16 +587,62 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
               'id',
             ], 'Booking');
             final status = _value(booking, ['status'], 'unknown');
+            final bookingId = int.tryParse(_value(booking, ['id'], '0')) ?? 0;
 
-            return Card(
+            return PremiumCard(
               margin: const EdgeInsets.only(bottom: 10),
-              child: ListTile(
-                leading: const CircleAvatar(
-                  child: Icon(Icons.calendar_today_outlined),
-                ),
-                title: Text('Booking #$title'),
-                subtitle: Text('Status: ${_formatStatus(status)}'),
-                trailing: _StatusBadge(status: status),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              onTap: bookingId > 0
+                  ? () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              CustomerBookingDetailPage(bookingId: bookingId),
+                        ),
+                      );
+                    }
+                  : null,
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.calendar_month_rounded,
+                      color: AppColors.primary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Booking #$title',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Status: ${_formatStatus(status)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  StatusBadge(status: status),
+                ],
               ),
             );
           }),
@@ -275,18 +656,15 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Pickup Terbaru',
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(fontWeight: FontWeight.bold),
+        const SectionHeader(
+          title: 'Pickup Terbaru',
+          subtitle: 'Status penjemputan dan pengantaran',
         ),
-        const SizedBox(height: 12),
         if (delivery == null)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text('Belum ada pickup terbaru.'),
-            ),
+          const EmptyState(
+            icon: Icons.local_shipping_outlined,
+            title: 'Belum Ada Pickup',
+            message: 'Layanan pickup akan muncul di sini jika dipilih.',
           )
         else
           Builder(
@@ -294,14 +672,52 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
               final id = _value(delivery, ['id', 'delivery_task_id'], '');
               final status = _value(delivery, ['status'], 'unknown');
 
-              return Card(
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    child: Icon(Icons.local_shipping_outlined),
-                  ),
-                  title: Text(id.isEmpty ? 'Pickup' : 'Pickup #$id'),
-                  subtitle: Text('Status: ${_formatStatus(status)}'),
-                  trailing: _StatusBadge(status: status),
+              return PremiumCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.local_shipping_rounded,
+                        color: AppColors.secondary,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            id.isEmpty ? 'Pickup Motor' : 'Pickup #$id',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Status: ${_formatStatus(status)}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    StatusBadge(status: status),
+                  ],
                 ),
               );
             },
@@ -335,76 +751,48 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({
+class _QuickActionItem extends StatelessWidget {
+  const _QuickActionItem({
     required this.icon,
-    required this.title,
-    required this.value,
+    required this.label,
+    required this.color,
+    required this.onTap,
   });
 
   final IconData icon;
-  final String title;
-  final String value;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 26),
-            const SizedBox(height: 8),
-            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: color.withValues(alpha: 0.25),
+                width: 1,
+              ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    final label = status
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map(
-          (word) => word.isEmpty
-              ? word
-              : '${word[0].toUpperCase()}${word.substring(1)}',
-        )
-        .join(' ');
-
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 120),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall
-            ?.copyWith(fontWeight: FontWeight.bold),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

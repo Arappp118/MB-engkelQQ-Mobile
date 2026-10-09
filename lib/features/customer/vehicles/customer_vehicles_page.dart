@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_states.dart';
+import '../../../core/widgets/confirmation_dialog.dart';
+import '../../../core/widgets/premium_card.dart';
 import '../../../models/vehicle.dart';
 import '../../../providers/vehicle_provider.dart';
 import 'vehicle_form_page.dart';
@@ -46,31 +50,13 @@ class _CustomerVehiclesPageState extends State<CustomerVehiclesPage> {
   }
 
   Future<void> _deleteVehicle(Vehicle vehicle) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Hapus Kendaraan'),
-          content: Text(
-            'Yakin ingin menghapus kendaraan '
-            '${vehicle.nomorPolisi}?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('Batal'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('Hapus'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await ConfirmationDialog.show(
+      context,
+      title: 'Hapus Kendaraan',
+      content:
+          'Yakin ingin menghapus kendaraan ${vehicle.nomorPolisi} dari daftar akun Anda?',
+      confirmText: 'Hapus',
+      isDestructive: true,
     );
 
     if (confirmed != true || !mounted) {
@@ -87,12 +73,16 @@ class _CustomerVehiclesPageState extends State<CustomerVehiclesPage> {
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kendaraan berhasil dihapus.')),
+        const SnackBar(
+          content: Text('Kendaraan berhasil dihapus.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(provider.errorMessage ?? 'Kendaraan gagal dihapus.'),
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -103,13 +93,28 @@ class _CustomerVehiclesPageState extends State<CustomerVehiclesPage> {
     final provider = context.watch<VehicleProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kendaraan Saya')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Kendaraan Saya'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: provider.isLoading ? null : _openAddVehicle,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Tambah'),
+        label: const Text(
+          'Tambah Kendaraan',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
+        backgroundColor: AppColors.surfaceCard,
         onRefresh: _refresh,
         child: _buildBody(context, provider),
       ),
@@ -121,10 +126,7 @@ class _CustomerVehiclesPageState extends State<CustomerVehiclesPage> {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
-          SizedBox(
-            height: 300,
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          LoadingState(height: 350, message: 'Memuat data kendaraan...'),
         ],
       );
     }
@@ -134,22 +136,11 @@ class _CustomerVehiclesPageState extends State<CustomerVehiclesPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
-          const SizedBox(height: 80),
-          const Icon(Icons.cloud_off_outlined, size: 64),
-          const SizedBox(height: 16),
-          Text(
-            'Kendaraan tidak dapat dimuat',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(provider.errorMessage!, textAlign: TextAlign.center),
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: provider.isLoading ? null : _refresh,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Coba Lagi'),
+          const SizedBox(height: 60),
+          ErrorState(
+            title: 'Kendaraan Gagal Dimuat',
+            message: provider.errorMessage!,
+            onRetry: provider.isLoading ? null : _refresh,
           ),
         ],
       );
@@ -160,26 +151,13 @@ class _CustomerVehiclesPageState extends State<CustomerVehiclesPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(20),
         children: [
-          const SizedBox(height: 80),
-          const Icon(Icons.two_wheeler_outlined, size: 72),
-          const SizedBox(height: 20),
-          Text(
-            'Belum Ada Kendaraan',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Tambahkan kendaraan untuk mulai '
-            'membuat booking service.',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _openAddVehicle,
-            icon: const Icon(Icons.add),
-            label: const Text('Tambah Kendaraan'),
+          const SizedBox(height: 60),
+          EmptyState(
+            icon: Icons.two_wheeler_outlined,
+            title: 'Belum Ada Kendaraan',
+            message: 'Tambahkan motor Anda untuk memudahkan proses booking servis secara rutin.',
+            actionLabel: 'Tambah Sekarang',
+            onAction: _openAddVehicle,
           ),
         ],
       );
@@ -189,9 +167,7 @@ class _CustomerVehiclesPageState extends State<CustomerVehiclesPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       itemCount: provider.vehicles.length,
-      separatorBuilder: (_, _) {
-        return const SizedBox(height: 12);
-      },
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final vehicle = provider.vehicles[index];
 
@@ -225,100 +201,145 @@ class _VehicleCard extends StatelessWidget {
 
     final subtitle = vehicleName.isEmpty ? 'Data kendaraan' : vehicleName;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const CircleAvatar(
-                  radius: 28,
-                  child: Icon(Icons.two_wheeler, size: 30),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        vehicle.nomorPolisi,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(subtitle),
-                    ],
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      onEdit();
-                    } else if (value == 'delete') {
-                      onDelete();
-                    }
-                  },
-                  itemBuilder: (_) {
-                    return const [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.edit_outlined),
-                          title: Text('Edit'),
+                child: const Icon(
+                  Icons.two_wheeler,
+                  size: 26,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundDarker,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text(
+                        vehicle.nomorPolisi,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.primary,
+                          letterSpacing: 1,
                         ),
                       ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.delete_outline),
-                          title: Text('Hapus'),
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
                       ),
-                    ];
-                  },
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            if (vehicle.tahun != null ||
-                vehicle.warna != null ||
-                vehicle.tipeMesin != null) ...[
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (vehicle.tahun != null)
-                    Expanded(
-                      child: _VehicleInfo(
-                        icon: Icons.calendar_today_outlined,
-                        label: 'Tahun',
-                        value: vehicle.tahun.toString(),
-                      ),
+              ),
+              PopupMenuButton<String>(
+                iconColor: AppColors.textSecondary,
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    onEdit();
+                  } else if (value == 'delete') {
+                    onDelete();
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: AppColors.secondary,
+                        ),
+                        SizedBox(width: 10),
+                        Text('Edit Kendaraan'),
+                      ],
                     ),
-                  if (vehicle.warna != null)
-                    Expanded(
-                      child: _VehicleInfo(
-                        icon: Icons.palette_outlined,
-                        label: 'Warna',
-                        value: vehicle.warna!,
-                      ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: AppColors.error,
+                        ),
+                        SizedBox(width: 10),
+                        Text('Hapus Kendaraan'),
+                      ],
                     ),
-                  if (vehicle.tipeMesin != null)
-                    Expanded(
-                      child: _VehicleInfo(
-                        icon: Icons.settings_outlined,
-                        label: 'Mesin',
-                        value: vehicle.tipeMesin!,
-                      ),
-                    ),
+                  ),
                 ],
               ),
             ],
+          ),
+          if (vehicle.tahun != null ||
+              vehicle.warna != null ||
+              vehicle.tipeMesin != null) ...[
+            const SizedBox(height: 14),
+            const Divider(color: AppColors.borderSubtle),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (vehicle.tahun != null)
+                  Expanded(
+                    child: _VehicleInfo(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'Tahun',
+                      value: vehicle.tahun.toString(),
+                    ),
+                  ),
+                if (vehicle.warna != null)
+                  Expanded(
+                    child: _VehicleInfo(
+                      icon: Icons.palette_outlined,
+                      label: 'Warna',
+                      value: vehicle.warna!,
+                    ),
+                  ),
+                if (vehicle.tipeMesin != null)
+                  Expanded(
+                    child: _VehicleInfo(
+                      icon: Icons.settings_outlined,
+                      label: 'Mesin',
+                      value: vehicle.tipeMesin!,
+                    ),
+                  ),
+              ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -339,18 +360,28 @@ class _VehicleInfo extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 18),
+        Icon(icon, size: 16, color: AppColors.textMuted),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 2),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: 1),
               Text(
                 value,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ),

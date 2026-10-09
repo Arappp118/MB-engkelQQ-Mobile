@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'customer_create_booking_page.dart';
-
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_states.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../core/widgets/status_badge.dart';
 import '../../../models/booking.dart';
 import '../../../providers/booking_provider.dart';
 import 'customer_booking_detail_page.dart';
+import 'customer_create_booking_page.dart';
 
 class CustomerBookingsPage extends StatefulWidget {
   const CustomerBookingsPage({super.key});
@@ -31,12 +34,18 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Booking Saya'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
         actions: [
           IconButton(
             tooltip: 'Buat Booking',
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: AppColors.primary),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -50,18 +59,61 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
       body: Consumer<BookingProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && provider.bookings.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(
+              height: 350,
+              message: 'Memuat riwayat booking...',
+            );
           }
 
           if (provider.errorMessage != null && provider.bookings.isEmpty) {
-            return _buildErrorState(provider.errorMessage!);
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _refreshBookings,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: [
+                  const SizedBox(height: 60),
+                  ErrorState(
+                    title: 'Gagal Memuat Booking',
+                    message: provider.errorMessage!,
+                    onRetry: _refreshBookings,
+                  ),
+                ],
+              ),
+            );
           }
 
           if (provider.bookings.isEmpty) {
-            return _buildEmptyState();
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _refreshBookings,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: [
+                  const SizedBox(height: 60),
+                  EmptyState(
+                    icon: Icons.calendar_month_outlined,
+                    title: 'Belum Ada Booking',
+                    message: 'Booking service kamu akan muncul di halaman ini.',
+                    actionLabel: 'Buat Booking Sekarang',
+                    onAction: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CustomerCreateBookingPage(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            );
           }
 
           return RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.surfaceCard,
             onRefresh: _refreshBookings,
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -89,62 +141,6 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
       ),
     );
   }
-
-  Widget _buildErrorState(String message) {
-    return RefreshIndicator(
-      onRefresh: _refreshBookings,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        children: [
-          const SizedBox(height: 100),
-          const Icon(Icons.error_outline, size: 64),
-          const SizedBox(height: 20),
-          const Text(
-            'Gagal Memuat Booking',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 20),
-          Center(
-            child: ElevatedButton.icon(
-              onPressed: _refreshBookings,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Coba Lagi'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return RefreshIndicator(
-      onRefresh: _refreshBookings,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        children: const [
-          SizedBox(height: 100),
-          Icon(Icons.calendar_month_outlined, size: 72),
-          SizedBox(height: 20),
-          Text(
-            'Belum Ada Booking',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Booking service kamu akan muncul '
-            'di halaman ini.',
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _BookingCard extends StatelessWidget {
@@ -155,86 +151,119 @@ class _BookingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+    return PremiumCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.calendar_month_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
                       booking.nomorBooking ?? 'Booking #${booking.id}',
                       style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatServiceType(booking.jenisLayanan),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              StatusBadge(status: booking.status ?? 'unknown'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          const Divider(color: AppColors.borderSubtle),
+          const SizedBox(height: 10),
+          _InfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Jadwal Servis',
+            value: '${booking.tanggal ?? '-'} • ${booking.waktu ?? '-'}',
+          ),
+          const SizedBox(height: 8),
+          _InfoRow(
+            icon: booking.pickupRequested == true
+                ? Icons.local_shipping_outlined
+                : Icons.directions_car_outlined,
+            label: 'Metode Kunjungan',
+            value: booking.pickupRequested == true
+                ? 'Pickup Kendaraan'
+                : 'Datang Sendiri',
+          ),
+          if (booking.alamatPickup != null &&
+              booking.alamatPickup!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _InfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Alamat Pickup',
+              value: booking.alamatPickup!,
+            ),
+          ],
+          if (booking.keluhan != null && booking.keluhan!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundDarker,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.report_problem_outlined,
+                    size: 16,
+                    color: AppColors.warning,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      booking.keluhan!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        height: 1.3,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  _StatusBadge(status: booking.status ?? 'unknown'),
                 ],
               ),
-              const SizedBox(height: 16),
-              _InfoRow(
-                icon: Icons.calendar_today_outlined,
-                label: 'Tanggal',
-                value: booking.tanggal ?? '-',
-              ),
-              const SizedBox(height: 10),
-              _InfoRow(
-                icon: Icons.access_time_outlined,
-                label: 'Waktu',
-                value: booking.waktu ?? '-',
-              ),
-              const SizedBox(height: 10),
-              _InfoRow(
-                icon: Icons.build_outlined,
-                label: 'Layanan',
-                value: _formatServiceType(booking.jenisLayanan),
-              ),
-              const SizedBox(height: 10),
-              _InfoRow(
-                icon: booking.pickupRequested == true
-                    ? Icons.local_shipping_outlined
-                    : Icons.directions_car_outlined,
-                label: 'Layanan Pickup',
-                value: booking.pickupRequested == true
-                    ? 'Pickup Kendaraan'
-                    : 'Datang Sendiri',
-              ),
-              if (booking.alamatPickup != null &&
-                  booking.alamatPickup!.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                _InfoRow(
-                  icon: Icons.location_on_outlined,
-                  label: 'Alamat',
-                  value: booking.alamatPickup!,
-                ),
-              ],
-              if (booking.keluhan != null && booking.keluhan!.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                const Divider(),
-                const SizedBox(height: 10),
-                const Text(
-                  'Keluhan',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  booking.keluhan!,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ],
-          ),
-        ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -244,11 +273,20 @@ class _BookingCard extends StatelessWidget {
       case 'medical_checkup':
         return 'Medical Checkup';
       case 'service_rutin':
+      case 'servis_rutin':
         return 'Service Rutin';
+      case 'tune_up':
+        return 'Tune Up';
+      case 'ganti_oli':
+        return 'Ganti Oli';
+      case 'overhaul':
+        return 'Overhaul';
+      case 'kelistrikan':
+        return 'Kelistrikan';
       case 'perbaikan':
         return 'Perbaikan';
       default:
-        return value ?? '-';
+        return value?.replaceAll('_', ' ').toUpperCase() ?? 'Layanan Servis';
     }
   }
 }
@@ -267,49 +305,26 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 10),
-        SizedBox(
-          width: 105,
+        Icon(icon, size: 16, color: AppColors.textMuted),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+        ),
+        Expanded(
           child: Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
           ),
         ),
-        Expanded(child: Text(value)),
       ],
     );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        _formatStatus(status),
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-
-  String _formatStatus(String value) {
-    return value
-        .replaceAll('_', ' ')
-        .split(' ')
-        .where((word) => word.isNotEmpty)
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
   }
 }

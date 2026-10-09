@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/app_states.dart';
+import '../../core/widgets/premium_card.dart';
 import '../../models/notification.dart';
 import '../../providers/notification_provider.dart';
 import '../customer/bookings/customer_booking_detail_page.dart';
@@ -58,8 +61,14 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Notifikasi'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
         actions: [
           Consumer<NotificationProvider>(
             builder: (context, provider, _) {
@@ -84,48 +93,53 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
           final displayList = _selectedFilterIndex == 0 ? allList : unreadList;
 
           if (provider.isLoading && allList.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(
+              height: 350,
+              message: 'Memuat notifikasi...',
+            );
           }
 
           if (provider.errorMessage != null && allList.isEmpty) {
-            return Center(
-              child: Padding(
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _loadData,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.cloud_off_outlined, size: 60),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Gagal memuat notifikasi',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(provider.errorMessage!, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _loadData,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Coba Lagi'),
-                    ),
-                  ],
-                ),
+                children: [
+                  const SizedBox(height: 60),
+                  ErrorState(
+                    title: 'Gagal Memuat Notifikasi',
+                    message: provider.errorMessage!,
+                    onRetry: _loadData,
+                  ),
+                ],
               ),
             );
           }
 
           return Column(
             children: [
-              Padding(
+              Container(
+                color: AppColors.surface,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 10,
                 ),
                 child: Row(
                   children: [
                     ChoiceChip(
                       label: Text('Semua (${allList.length})'),
                       selected: _selectedFilterIndex == 0,
+                      selectedColor: AppColors.primaryContainer,
+                      labelStyle: TextStyle(
+                        color: _selectedFilterIndex == 0
+                            ? AppColors.primaryLight
+                            : AppColors.textSecondary,
+                        fontWeight: _selectedFilterIndex == 0
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
                       onSelected: (selected) {
                         if (selected) {
                           setState(() => _selectedFilterIndex = 0);
@@ -136,6 +150,15 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                     ChoiceChip(
                       label: Text('Belum Dibaca (${unreadList.length})'),
                       selected: _selectedFilterIndex == 1,
+                      selectedColor: AppColors.primaryContainer,
+                      labelStyle: TextStyle(
+                        color: _selectedFilterIndex == 1
+                            ? AppColors.primaryLight
+                            : AppColors.textSecondary,
+                        fontWeight: _selectedFilterIndex == 1
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
                       onSelected: (selected) {
                         if (selected) {
                           setState(() => _selectedFilterIndex = 1);
@@ -145,49 +168,36 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
                   ],
                 ),
               ),
-              const Divider(height: 1),
+              const Divider(color: AppColors.borderSubtle, height: 1),
               Expanded(
                 child: RefreshIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.surfaceCard,
                   onRefresh: _loadData,
                   child: displayList.isEmpty
                       ? ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           children: [
                             const SizedBox(height: 80),
-                            Icon(
-                              _selectedFilterIndex == 1
+                            EmptyState(
+                              icon: _selectedFilterIndex == 1
                                   ? Icons.mark_email_read_outlined
                                   : Icons.notifications_none_outlined,
-                              size: 72,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _selectedFilterIndex == 1
+                              title: _selectedFilterIndex == 1
                                   ? 'Semua notifikasi telah dibaca'
                                   : 'Belum ada notifikasi',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _selectedFilterIndex == 1
+                              message: _selectedFilterIndex == 1
                                   ? 'Tidak ada notifikasi baru saat ini.'
                                   : 'Pemberitahuan aktivitas servis akan muncul di sini.',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.grey),
                             ),
                           ],
                         )
                       : ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           itemCount: displayList.length,
                           separatorBuilder: (context, index) =>
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final item = displayList[index];
                             return _NotificationCard(
@@ -235,20 +245,20 @@ class _NotificationCard extends StatelessWidget {
     }
   }
 
-  Color _getIconColor(BuildContext context, String? type) {
+  Color _getIconColor(String? type) {
     switch (type) {
       case 'payment':
-        return Colors.green;
+        return AppColors.success;
       case 'booking':
-        return Colors.blue;
+        return AppColors.secondary;
       case 'service_order':
-        return Colors.orange;
+        return AppColors.primary;
       case 'delivery_task':
-        return Colors.purple;
+        return AppColors.warning;
       case 'job':
-        return Colors.teal;
+        return AppColors.info;
       default:
-        return Theme.of(context).colorScheme.primary;
+        return AppColors.primary;
     }
   }
 
@@ -270,135 +280,113 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUnread = !notification.isReadStatus;
-    final color = _getIconColor(context, notification.type);
+    final color = _getIconColor(notification.type);
 
-    return Card(
-      elevation: isUnread ? 2 : 0,
-      color: isUnread
-          ? Theme.of(context).colorScheme.surfaceContainerHighest
-                .withValues(alpha: 0.5)
-          : null,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isUnread
-            ? BorderSide(
-                color: Theme.of(context).colorScheme.primary
-                    .withValues(alpha: 0.3),
-                width: 1.5,
-              )
-            : BorderSide(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
-              ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _getIcon(notification.type),
-                  color: color,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return PremiumCard(
+      padding: const EdgeInsets.all(14),
+      backgroundColor: isUnread
+          ? AppColors.surfaceCardElevated
+          : AppColors.surfaceCard,
+      borderColor: isUnread
+          ? AppColors.primary.withValues(alpha: 0.4)
+          : AppColors.border,
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(_getIcon(notification.type), color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            notification.title ?? 'Pemberitahuan',
-                            style: TextStyle(
-                              fontWeight: isUnread
-                                  ? FontWeight.bold
-                                  : FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
+                    Expanded(
+                      child: Text(
+                        notification.title ?? 'Pemberitahuan',
+                        style: TextStyle(
+                          fontWeight: isUnread
+                              ? FontWeight.w800
+                              : FontWeight.w600,
+                          fontSize: 14,
+                          color: AppColors.textPrimary,
                         ),
-                        if (isUnread)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            margin: const EdgeInsets.only(left: 6),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      notification.message ?? '',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatDate(notification.createdAt),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Theme.of(context).colorScheme.outline,
-                          ),
+                    if (isUnread)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(left: 6),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primary,
                         ),
-                        if (isUnread)
-                          InkWell(
-                            onTap: onMarkRead,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.done,
-                                    size: 14,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    'Tandai dibaca',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                      ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  notification.message ?? '',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatDate(notification.createdAt),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    if (isUnread)
+                      InkWell(
+                        onTap: onMarkRead,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.done,
+                                size: 14,
+                                color: AppColors.primary,
+                              ),
+                              SizedBox(width: 3),
+                              Text(
+                                'Tandai dibaca',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

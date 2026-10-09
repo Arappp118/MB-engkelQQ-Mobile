@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_states.dart';
+import '../../../core/widgets/premium_card.dart';
 import '../../../models/invoice.dart';
 import '../../../providers/invoice_provider.dart';
 import 'customer_invoice_detail_page.dart';
@@ -28,66 +31,58 @@ class _CustomerInvoicesPageState extends State<CustomerInvoicesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Riwayat Invoice')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Riwayat Invoice'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
+      ),
       body: Consumer<InvoiceProvider>(
         builder: (context, provider, _) {
           final invoices = provider.invoices;
 
           if (provider.isLoading && invoices.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(
+              height: 350,
+              message: 'Memuat riwayat invoice...',
+            );
           }
 
           if (provider.errorMessage != null && invoices.isEmpty) {
-            return Center(
-              child: Padding(
+            return RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.cloud_off_outlined, size: 60),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Riwayat invoice tidak dapat dimuat',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(provider.errorMessage!, textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: _refresh,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Coba Lagi'),
-                    ),
-                  ],
-                ),
+                children: [
+                  const SizedBox(height: 60),
+                  ErrorState(
+                    title: 'Gagal Memuat Invoice',
+                    message: provider.errorMessage!,
+                    onRetry: _refresh,
+                  ),
+                ],
               ),
             );
           }
 
           if (invoices.isEmpty) {
             return RefreshIndicator(
+              color: AppColors.primary,
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
                 children: const [
                   SizedBox(height: 80),
-                  Icon(
-                    Icons.receipt_long_outlined,
-                    size: 72,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Belum Ada Invoice',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Invoice akan dibuat dan tersedia secara otomatis setelah pekerjaan servis kendaraan Anda selesai.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey),
+                  EmptyState(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Belum Ada Invoice',
+                    message: 'Invoice akan dibuat dan tersedia secara otomatis setelah pekerjaan servis kendaraan Anda selesai.',
                   ),
                 ],
               ),
@@ -95,6 +90,8 @@ class _CustomerInvoicesPageState extends State<CustomerInvoicesPage> {
           }
 
           return RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.surfaceCard,
             onRefresh: _refresh,
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -120,74 +117,69 @@ class _InvoiceItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 1,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          if (invoice.serviceOrderId != null) {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => CustomerInvoiceDetailPage(
-                  serviceOrderId: invoice.serviceOrderId!,
-                ),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      onTap: () {
+        if (invoice.serviceOrderId != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => CustomerInvoiceDetailPage(
+                serviceOrderId: invoice.serviceOrderId!,
               ),
-            );
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary
-                      .withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.receipt_long,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      invoice.invoiceNumber,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Service Order #${invoice.serviceOrderId ?? '-'}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      _formatCurrency(invoice.grandTotal),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
+            ),
+          );
+        }
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.receipt_long,
+              color: AppColors.primary,
+              size: 22,
+            ),
           ),
-        ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  invoice.invoiceNumber,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Service Order #${invoice.serviceOrderId ?? '-'}',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _formatCurrency(invoice.grandTotal),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+        ],
       ),
     );
   }

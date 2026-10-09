@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/routing/app_router.dart';
+import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/booking_provider.dart';
 import 'providers/dashboard_provider.dart';
@@ -87,10 +88,9 @@ class _MBEngkelQQAppState extends State<MBEngkelQQApp> {
         title: 'MB-engkelQQ Mobile',
         debugShowCheckedModeBanner: false,
         routerConfig: _appRouter.router,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.orange),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.darkTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark,
       ),
     );
   }

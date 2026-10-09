@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../invoices/customer_invoice_detail_page.dart';
-import '../payments/customer_payment_page.dart';
-
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_buttons.dart';
+import '../../../core/widgets/app_states.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../core/widgets/section_header.dart';
+import '../../../core/widgets/service_status_timeline.dart';
+import '../../../core/widgets/status_badge.dart';
 import '../../../models/service_order.dart';
 import '../../../providers/service_order_provider.dart';
+import '../invoices/customer_invoice_detail_page.dart';
+import '../payments/customer_payment_page.dart';
 
 class CustomerServiceOrderDetailPage extends StatefulWidget {
   const CustomerServiceOrderDetailPage({
@@ -42,17 +48,29 @@ class _CustomerServiceOrderDetailPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Detail Servis')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Detail Servis'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
+      ),
       body: Consumer<ServiceOrderProvider>(
         builder: (context, provider, _) {
           final order = provider.selectedServiceOrder;
 
           if (provider.isLoading && order == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(
+              height: 350,
+              message: 'Memuat data order servis...',
+            );
           }
 
           if (provider.errorMessage != null && order == null) {
-            return _ErrorView(
+            return ErrorState(
+              title: 'Gagal Memuat Servis',
               message: provider.errorMessage!,
               onRetry: _refresh,
             );
@@ -60,29 +78,50 @@ class _CustomerServiceOrderDetailPageState
 
           if (order == null) {
             return const Center(
-              child: Text('Data service order tidak ditemukan.'),
+              child: EmptyState(
+                title: 'Data Tidak Ditemukan',
+                message: 'Data service order tidak tersedia.',
+              ),
             );
           }
 
           return RefreshIndicator(
+            color: AppColors.primary,
+            backgroundColor: AppColors.surfaceCard,
             onRefresh: _refresh,
             child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
               children: [
                 _ServiceHeader(order: order),
                 const SizedBox(height: 16),
+                ServiceStatusTimeline(currentStatus: order.status ?? 'pending'),
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Hasil Diagnosis',
+                  subtitle: 'Catatan teknis dari mekanik MB-engkelQQ',
+                ),
                 _DiagnosisCard(order: order),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Tindakan & Sparepart',
+                  subtitle: 'Daftar suku cadang dan jasa servis',
+                ),
                 _ItemsCard(order: order),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+                const SectionHeader(
+                  title: 'Rincian Biaya',
+                  subtitle: 'Total estimasi biaya pengerjaan',
+                ),
                 _SummaryCard(order: order),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 _PaymentSection(order: order),
                 if (order.status?.toLowerCase() == 'completed' ||
                     order.status?.toLowerCase() == 'paid') ...[
                   const SizedBox(height: 16),
                   _InvoiceSection(order: order),
                 ],
+                const SizedBox(height: 32),
               ],
             ),
           );
@@ -99,31 +138,57 @@ class _ServiceHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Service Order',
-              style: TextStyle(fontSize: 13, color: Colors.grey),
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.secondary, AppColors.secondaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 6),
-            Text(
-              '#${order.id}',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            child: const Center(
+              child: Icon(
+                Icons.build_circle_rounded,
+                size: 28,
+                color: Colors.white,
+              ),
             ),
-            const SizedBox(height: 12),
-            Row(
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Status:'),
-                const SizedBox(width: 8),
-                _StatusBadge(status: order.status),
+                const Text(
+                  'Service Order',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '#${order.id}',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+          StatusBadge(status: order.status ?? 'unknown'),
+        ],
       ),
     );
   }
@@ -138,24 +203,43 @@ class _DiagnosisCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final diagnosis = order.diagnosis?.trim();
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Diagnosis Mekanik',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.search_rounded,
+                size: 18,
+                color: AppColors.secondary,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Diagnosis Mekanik',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            diagnosis == null || diagnosis.isEmpty
+                ? 'Diagnosis belum dicatat oleh mekanik.'
+                : diagnosis,
+            style: TextStyle(
+              fontSize: 13,
+              color: diagnosis == null || diagnosis.isEmpty
+                  ? AppColors.textMuted
+                  : AppColors.textPrimary,
+              height: 1.4,
             ),
-            const SizedBox(height: 10),
-            Text(
-              diagnosis == null || diagnosis.isEmpty
-                  ? 'Diagnosis belum tersedia.'
-                  : diagnosis,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -168,68 +252,86 @@ class _ItemsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Tindakan / Item Servis',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            if (order.items.isEmpty)
-              const Text(
-                'Belum ada item servis.',
-                style: TextStyle(color: Colors.grey),
-              )
-            else
-              ...order.items.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Column(
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.build_outlined, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${item.quantity} x '
-                                  '${_formatCurrency(item.price)}',
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatCurrency(item.subtotal),
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (order.items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Belum ada tindakan atau suku cadang yang dimasukkan.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 13),
               ),
-          ],
-        ),
+            )
+          else
+            ...order.items.asMap().entries.map((entry) {
+              final index = entry.key;
+              final item = entry.value;
+              final isLast = index == order.items.length - 1;
+
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceCardElevated,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(
+                            Icons.handyman_outlined,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                '${item.quantity} × ${_formatCurrency(item.price)}',
+                                style: const TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          _formatCurrency(item.subtotal),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!isLast)
+                    const Divider(color: AppColors.borderSubtle, height: 1),
+                ],
+              );
+            }),
+        ],
       ),
     );
   }
@@ -242,28 +344,26 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _SummaryRow(
-              label: 'Subtotal',
-              value: _formatCurrency(order.subtotal),
-            ),
-            const SizedBox(height: 8),
-            _SummaryRow(
-              label: 'Biaya Pickup',
-              value: _formatCurrency(order.deliveryFee),
-            ),
-            const Divider(height: 24),
-            _SummaryRow(
-              label: 'Grand Total',
-              value: _formatCurrency(order.grandTotal),
-              bold: true,
-            ),
-          ],
-        ),
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          _SummaryRow(
+            label: 'Subtotal Servis & Part',
+            value: _formatCurrency(order.subtotal),
+          ),
+          const SizedBox(height: 8),
+          _SummaryRow(
+            label: 'Biaya Layanan Pickup',
+            value: _formatCurrency(order.deliveryFee),
+          ),
+          const Divider(color: AppColors.borderSubtle, height: 24),
+          _SummaryRow(
+            label: 'Grand Total',
+            value: _formatCurrency(order.grandTotal),
+            bold: true,
+          ),
+        ],
       ),
     );
   }
@@ -279,92 +379,169 @@ class _PaymentSection extends StatelessWidget {
     final status = order.status?.toLowerCase();
 
     if (status == 'paid') {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.check_circle_outline, color: Colors.green),
-                title: Text('Pembayaran Selesai'),
-                subtitle: Text('Pembayaran servis Anda telah diverifikasi.'),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            CustomerInvoiceDetailPage(serviceOrderId: order.id),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.receipt_long),
-                  label: const Text('Lihat Invoice'),
+      return PremiumCard(
+        padding: const EdgeInsets.all(16),
+        borderColor: AppColors.success.withValues(alpha: 0.3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.success,
+                  size: 22,
                 ),
-              ),
-            ],
-          ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pembayaran Telah Lunas',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Transaksi telah diverifikasi dan invoice resmi tersedia.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            SecondaryButton(
+              text: 'Buka Invoice Resmi',
+              icon: Icons.receipt_long,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        CustomerInvoiceDetailPage(serviceOrderId: order.id),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
       );
     }
 
     if (status != 'completed' && status != 'waiting_payment') {
-      return Card(
-        child: ListTile(
-          leading: const Icon(Icons.payment_outlined),
-          title: const Text('Pembayaran'),
-          subtitle: const Text('Pembayaran tersedia setelah servis selesai.'),
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
+      return PremiumCard(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            const Text(
-              'Pembayaran',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCardElevated,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.hourglass_empty_rounded,
+                color: AppColors.textMuted,
+                size: 20,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Total yang harus dibayar: '
-              '${_formatCurrency(order.grandTotal)}',
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final result = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                      builder: (_) => CustomerPaymentPage(serviceOrder: order),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tahap Pengerjaan',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
-                  );
-
-                  if (result == true && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Pembayaran berhasil dikirim untuk verifikasi admin.',
-                        ),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.payment),
-                label: const Text('Bayar Sekarang'),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Menu pembayaran akan aktif setelah seluruh servis selesai dikerjakan.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                ],
               ),
             ),
           ],
         ),
+      );
+    }
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(18),
+      borderColor: AppColors.primary.withValues(alpha: 0.5),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Pembayaran Siap Dilakukan',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              StatusBadge(status: 'Menunggu Pembayaran'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Total Tagihan:',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              Text(
+                _formatCurrency(order.grandTotal),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          PrimaryButton(
+            text: 'Bayar Sekarang',
+            icon: Icons.payment_rounded,
+            height: 48,
+            onPressed: () async {
+              final result = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => CustomerPaymentPage(serviceOrder: order),
+                ),
+              );
+
+              if (result == true && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Pembayaran berhasil dikirim untuk verifikasi admin.',
+                    ),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
     );
   }
@@ -377,49 +554,45 @@ class _InvoiceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.receipt_long,
-                  color: Theme.of(context).colorScheme.primary,
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      borderColor: AppColors.secondary.withValues(alpha: 0.35),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.receipt_long, color: AppColors.secondary, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Invoice Resmi MB-engkelQQ',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Invoice Servis',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Servis telah selesai. Anda dapat melihat rincian tagihan resmi untuk pesanan servis ini.',
-              style: TextStyle(fontSize: 13),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          CustomerInvoiceDetailPage(serviceOrderId: order.id),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text('Buka Invoice'),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Servis telah selesai. Anda dapat mengunduh atau meninjau rincian faktur resmi.',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          SecondaryButton(
+            text: 'Buka Invoice',
+            icon: Icons.receipt_long_outlined,
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CustomerInvoiceDetailPage(serviceOrderId: order.id),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -438,82 +611,28 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = TextStyle(
-      fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-      fontSize: bold ? 16 : 14,
-    );
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: style),
-        Text(value, style: style),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: bold ? 15 : 13,
+            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+            color: bold ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: bold ? 17 : 13,
+            fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+            color: bold ? AppColors.primary : AppColors.textPrimary,
+          ),
+        ),
       ],
     );
   }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final String? status;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.grey.shade200,
-      ),
-      child: Text(
-        _formatStatus(status),
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, size: 48),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            ElevatedButton(onPressed: onRetry, child: const Text('Coba Lagi')),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _formatStatus(String? value) {
-  if (value == null || value.isEmpty) {
-    return '-';
-  }
-
-  return value
-      .replaceAll('_', ' ')
-      .split(' ')
-      .map(
-        (word) => word.isEmpty
-            ? word
-            : '${word[0].toUpperCase()}${word.substring(1)}',
-      )
-      .join(' ');
 }
 
 String _formatCurrency(double? value) {

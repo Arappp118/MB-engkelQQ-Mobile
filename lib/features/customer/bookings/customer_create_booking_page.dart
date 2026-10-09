@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/service_area_constants.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_buttons.dart';
+import '../../../core/widgets/app_states.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../models/vehicle.dart';
 import '../../../providers/booking_provider.dart';
 import '../../../providers/vehicle_provider.dart';
@@ -100,19 +105,24 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
         icon: const Icon(
           Icons.location_off_rounded,
-          color: Colors.orange,
+          color: AppColors.warning,
           size: 48,
         ),
         title: const Text(
           ServiceAreaConstants.outOfAreaTitle,
           textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
         content: const Text(
           ServiceAreaConstants.outOfAreaMessage,
           textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.textSecondary),
         ),
         actionsAlignment: MainAxisAlignment.spaceEvenly,
         actions: [
@@ -121,6 +131,10 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
             child: const Text('Tutup'),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               Navigator.of(dialogCtx).pop();
               _checkLocationAndValidateServiceArea();
@@ -141,23 +155,35 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
     showDialog<void>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppColors.surface,
         icon: Icon(
           state == LocationPermissionState.serviceDisabled
               ? Icons.location_off_outlined
               : Icons.error_outline_rounded,
-          color: Colors.redAccent,
+          color: AppColors.error,
           size: 44,
         ),
         title: Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
-        content: Text(message, textAlign: TextAlign.center),
+        content: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
         actionsAlignment: MainAxisAlignment.spaceEvenly,
         actions: [
           if (state == LocationPermissionState.serviceDisabled) ...[
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 Navigator.of(dialogCtx).pop();
                 _locationService.openLocationSettings();
@@ -170,6 +196,10 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
             ),
           ] else if (state == LocationPermissionState.deniedForever) ...[
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 Navigator.of(dialogCtx).pop();
                 _locationService.openAppSettings();
@@ -187,6 +217,10 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
             ),
             if (onRetry != null)
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: () {
                   Navigator.of(dialogCtx).pop();
                   onRetry();
@@ -436,9 +470,12 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
     }
 
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Booking berhasil dibuat.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Booking berhasil dibuat.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
 
       Navigator.of(context).pop();
       return;
@@ -449,18 +486,33 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.surfaceCardElevated,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Buat Booking Servis')),
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Buat Booking Servis'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
+      ),
       body: Consumer2<VehicleProvider, BookingProvider>(
         builder: (context, vehicleProvider, bookingProvider, child) {
           if (vehicleProvider.isLoading && vehicleProvider.vehicles.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState(
+              height: 350,
+              message: 'Memuat data kendaraan...',
+            );
           }
 
           final vehicles = vehicleProvider.vehicles;
@@ -469,35 +521,14 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.two_wheeler_outlined,
-                      size: 64,
-                      color: Colors.grey,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Anda belum memiliki kendaraan.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Tambahkan kendaraan terlebih dahulu sebelum membuat booking servis.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        context.read<VehicleProvider>().loadVehicles();
-                      },
-                      child: const Text('Refresh'),
-                    ),
-                  ],
+                child: EmptyState(
+                  icon: Icons.two_wheeler_outlined,
+                  title: 'Anda Belum Memiliki Kendaraan',
+                  message: 'Tambahkan kendaraan terlebih dahulu sebelum membuat booking servis motor.',
+                  actionLabel: 'Refresh Data',
+                  onAction: () {
+                    context.read<VehicleProvider>().loadVehicles();
+                  },
                 ),
               ),
             );
@@ -508,273 +539,335 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildVehicleDropdown(vehicles),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedService,
-                  decoration: const InputDecoration(
-                    labelText: 'Jenis Layanan',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.build_outlined),
-                  ),
-                  items: _serviceTypes.map((item) {
-                    return DropdownMenuItem<String>(
-                      value: item['value'],
-                      child: Text(item['label']!),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _selectedService = value;
-                    });
-                  },
+                // STEP 1: Kendaraan & Layanan
+                const SectionHeader(
+                  title: '1. Kendaraan & Jenis Servis',
+                  subtitle: 'Pilih motor dan paket perawatan yang diinginkan',
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: _selectDate,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Tanggal Booking',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.calendar_today_outlined),
-                          ),
-                          child: Text(
-                            _selectedDate == null
-                                ? 'Pilih tanggal'
-                                : _formatDate(_selectedDate!),
-                          ),
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildVehicleDropdown(vehicles),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedService,
+                        dropdownColor: AppColors.surfaceCardElevated,
+                        decoration: const InputDecoration(
+                          labelText: 'Jenis Layanan Servis',
+                          prefixIcon: Icon(Icons.build_outlined),
                         ),
+                        items: _serviceTypes.map((item) {
+                          return DropdownMenuItem<String>(
+                            value: item['value'],
+                            child: Text(item['label']!),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _selectedService = value;
+                          });
+                        },
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: InkWell(
-                        onTap: _selectTime,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Waktu Booking',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.access_time_outlined),
-                          ),
-                          child: Text(
-                            _selectedTime == null
-                                ? 'Pilih waktu'
-                                : _selectedTime!.format(context),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _keluhanController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Keluhan Kendaraan',
-                    hintText: 'Contoh: Rem belakang berbunyi, tarikan berat...',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.report_problem_outlined),
-                    alignLabelWithHint: true,
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Keluhan kendaraan wajib diisi.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _diagnosisController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Diagnosis Mandiri (Opsional)',
-                    hintText: 'Contoh: Kemungkinan kampas rem habis...',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.search_outlined),
-                    alignLabelWithHint: true,
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text(
-                    'Minta Pickup Kendaraan (Kota Tanjungpinang)',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: Text(
-                    _pickupRequested
-                        ? 'Kendaraan akan dijemput oleh kurir di wilayah Kota Tanjungpinang.'
-                        : 'Saya akan datang sendiri ke bengkel.',
-                  ),
-                  value: _pickupRequested,
-                  onChanged: (value) {
-                    if (value) {
-                      setState(() {
-                        _pickupRequested = true;
-                      });
-                      _checkLocationAndValidateServiceArea(
-                        isAutoTriggered: true,
-                      );
-                    } else {
-                      setState(() {
-                        _pickupRequested = false;
-                        _alamatPickupController.clear();
-                        _jarakController.clear();
-                        _latitude = null;
-                        _longitude = null;
-                      });
-                    }
-                  },
+                const SizedBox(height: 20),
+
+                // STEP 2: Jadwal Booking
+                const SectionHeader(
+                  title: '2. Jadwal Kunjungan',
+                  subtitle: 'Tentukan tanggal dan estimasi jam servis',
                 ),
-                if (_pickupRequested) ...[
-                  const SizedBox(height: 12),
-                  Row(
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _isGettingLocation
-                              ? null
-                              : () => _checkLocationAndValidateServiceArea(),
-                          icon: _isGettingLocation
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.my_location),
-                          label: Text(
-                            _isGettingLocation ? 'Mencari...' : 'Lokasi Saya',
+                        child: InkWell(
+                          onTap: _selectDate,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Tanggal Booking',
+                              prefixIcon: Icon(Icons.calendar_today_outlined),
+                            ),
+                            child: Text(
+                              _selectedDate == null
+                                  ? 'Pilih tanggal'
+                                  : _formatDate(_selectedDate!),
+                              style: TextStyle(
+                                color: _selectedDate == null
+                                    ? AppColors.textMuted
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _openMapPicker,
-                          icon: const Icon(Icons.map_outlined),
-                          label: const Text('Pilih di Peta'),
+                        child: InkWell(
+                          onTap: _selectTime,
+                          borderRadius: BorderRadius.circular(12),
+                          child: InputDecorator(
+                            decoration: const InputDecoration(
+                              labelText: 'Waktu Booking',
+                              prefixIcon: Icon(Icons.access_time_outlined),
+                            ),
+                            child: Text(
+                              _selectedTime == null
+                                  ? 'Pilih waktu'
+                                  : _selectedTime!.format(context),
+                              style: TextStyle(
+                                color: _selectedTime == null
+                                    ? AppColors.textMuted
+                                    : AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  if (_latitude != null && _longitude != null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Theme.of(context).colorScheme.secondaryContainer,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(Icons.location_on, color: Colors.green),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Titik Pickup Terverifikasi (Tanjungpinang)\n'
-                              'Lat: ${_latitude!.toStringAsFixed(6)} | '
-                              'Lng: ${_longitude!.toStringAsFixed(6)}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _openMapPicker,
-                            child: const Text('Buka Peta'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _alamatPickupController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Alamat Pickup di Kota Tanjungpinang',
-                      hintText: 'Gunakan GPS atau isi manual...',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.location_on_outlined),
-                      alignLabelWithHint: true,
-                    ),
-                    validator: (value) {
-                      if (_pickupRequested &&
-                          (value == null || value.trim().isEmpty)) {
-                        return 'Alamat pickup wajib diisi.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _jarakController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Estimasi Jarak ke Bengkel (km)',
-                      hintText: 'Contoh: 3.5',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.route_outlined),
-                    ),
-                    validator: (value) {
-                      if (_pickupRequested) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Estimasi jarak wajib diisi jika meminta pickup.';
-                        }
-                        final parsed = double.tryParse(value.trim());
-                        if (parsed == null || parsed <= 0) {
-                          return 'Jarak harus berupa angka lebih dari 0.';
-                        }
-                      }
-                      return null;
-                    },
-                  ),
-                ],
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _catatanController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Catatan (Opsional)',
-                    hintText: 'Catatan tambahan untuk bengkel...',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.notes_outlined),
-                    alignLabelWithHint: true,
-                  ),
                 ),
-                const SizedBox(height: 28),
-                SizedBox(
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: bookingProvider.isLoading ? null : _submit,
-                    icon: bookingProvider.isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.check_circle_outline),
-                    label: Text(
-                      bookingProvider.isLoading
-                          ? 'Menyimpan...'
-                          : 'Buat Booking',
-                    ),
+                const SizedBox(height: 20),
+
+                // STEP 3: Keluhan & Diagnosis
+                const SectionHeader(
+                  title: '3. Keluhan & Catatan',
+                  subtitle: 'Ceritakan kendala yang dirasakan pada motor Anda',
+                ),
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _keluhanController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Keluhan Kendaraan *',
+                          hintText:
+                              'Contoh: Rem belakang berbunyi, tarikan berat...',
+                          prefixIcon: Icon(Icons.report_problem_outlined),
+                          alignLabelWithHint: true,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Keluhan kendaraan wajib diisi.';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _diagnosisController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Diagnosis Mandiri (Opsional)',
+                          hintText: 'Contoh: Kemungkinan kampas rem habis...',
+                          prefixIcon: Icon(Icons.search_outlined),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _catatanController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Catatan Tambahan (Opsional)',
+                          hintText: 'Instruksi khusus untuk mekanik...',
+                          prefixIcon: Icon(Icons.notes_outlined),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                // STEP 4: Layanan Pickup
+                const SectionHeader(
+                  title: '4. Layanan Pickup (Penjemputan)',
+                  subtitle: 'Khusus untuk wilayah jangkauan Kota Tanjungpinang',
+                ),
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        activeThumbColor: AppColors.primary,
+                        title: const Text(
+                          'Minta Pickup Kendaraan (Kota Tanjungpinang)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          _pickupRequested
+                              ? 'Kendaraan akan dijemput oleh kurir di wilayah Kota Tanjungpinang.'
+                              : 'Saya akan datang sendiri ke bengkel.',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        value: _pickupRequested,
+                        onChanged: (value) {
+                          if (value) {
+                            setState(() {
+                              _pickupRequested = true;
+                            });
+                            _checkLocationAndValidateServiceArea(
+                              isAutoTriggered: true,
+                            );
+                          } else {
+                            setState(() {
+                              _pickupRequested = false;
+                              _alamatPickupController.clear();
+                              _jarakController.clear();
+                              _latitude = null;
+                              _longitude = null;
+                            });
+                          }
+                        },
+                      ),
+                      if (_pickupRequested) ...[
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SecondaryButton(
+                                text: _isGettingLocation
+                                    ? 'Mencari...'
+                                    : 'Lokasi Saya (GPS)',
+                                icon: Icons.my_location,
+                                isLoading: _isGettingLocation,
+                                onPressed: _isGettingLocation
+                                    ? null
+                                    : () =>
+                                          _checkLocationAndValidateServiceArea(),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Pilih di Peta',
+                                icon: Icons.map_outlined,
+                                backgroundColor: AppColors.secondary,
+                                onPressed: _openMapPicker,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_latitude != null && _longitude != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: AppColors.secondaryContainer,
+                              border: Border.all(
+                                color: AppColors.secondary.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  color: AppColors.secondary,
+                                  size: 22,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Titik Pickup Terverifikasi (Tanjungpinang)\n'
+                                    'Lat: ${_latitude!.toStringAsFixed(6)} | '
+                                    'Lng: ${_longitude!.toStringAsFixed(6)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                      color: AppColors.textPrimary,
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: _openMapPicker,
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    foregroundColor: AppColors.secondary,
+                                  ),
+                                  child: const Text('Ubah Peta'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _alamatPickupController,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            labelText: 'Alamat Pickup di Kota Tanjungpinang *',
+                            hintText: 'Gunakan GPS atau isi detail alamat...',
+                            prefixIcon: Icon(Icons.location_on_outlined),
+                            alignLabelWithHint: true,
+                          ),
+                          validator: (value) {
+                            if (_pickupRequested &&
+                                (value == null || value.trim().isEmpty)) {
+                              return 'Alamat pickup wajib diisi.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _jarakController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Estimasi Jarak ke Bengkel (km) *',
+                            hintText: 'Contoh: 3.5',
+                            prefixIcon: Icon(Icons.route_outlined),
+                          ),
+                          validator: (value) {
+                            if (_pickupRequested) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Estimasi jarak wajib diisi jika meminta pickup.';
+                              }
+                              final parsed = double.tryParse(value.trim());
+                              if (parsed == null || parsed <= 0) {
+                                return 'Jarak harus berupa angka lebih dari 0.';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Submit Button
+                PrimaryButton(
+                  text: 'Konfirmasi & Buat Booking',
+                  icon: Icons.check_circle_outline,
+                  height: 52,
+                  isLoading: bookingProvider.isLoading,
+                  onPressed: bookingProvider.isLoading ? null : _submit,
+                ),
+                const SizedBox(height: 32),
               ],
             ),
           );
@@ -786,17 +879,17 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
   Widget _buildVehicleDropdown(List<Vehicle> vehicles) {
     return DropdownButtonFormField<int>(
       initialValue: _selectedVehicleId,
+      dropdownColor: AppColors.surfaceCardElevated,
       decoration: const InputDecoration(
-        labelText: 'Kendaraan',
-        border: OutlineInputBorder(),
+        labelText: 'Pilih Kendaraan *',
         prefixIcon: Icon(Icons.two_wheeler_outlined),
       ),
       items: vehicles.map((vehicle) {
         return DropdownMenuItem<int>(
           value: vehicle.id,
           child: Text(
-            '${vehicle.nomorPolisi} • '
-            '${vehicle.merk} ${vehicle.model}',
+            '${vehicle.nomorPolisi} • ${vehicle.merk} ${vehicle.model}',
+            overflow: TextOverflow.ellipsis,
           ),
         );
       }).toList(),

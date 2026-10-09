@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/app_buttons.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../core/widgets/section_header.dart';
 import '../../../models/vehicle.dart';
 import '../../../providers/vehicle_provider.dart';
 
@@ -89,7 +93,10 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
 
     if (tahun == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tahun kendaraan harus berupa angka.')),
+        const SnackBar(
+          content: Text('Tahun kendaraan harus berupa angka.'),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
@@ -135,6 +142,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                 ? 'Data kendaraan berhasil diperbarui.'
                 : 'Kendaraan berhasil ditambahkan.',
           ),
+          backgroundColor: AppColors.success,
         ),
       );
 
@@ -148,6 +156,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
           provider.errorMessage ??
               'Terjadi kesalahan saat menyimpan kendaraan.',
         ),
+        backgroundColor: AppColors.error,
       ),
     );
   }
@@ -184,19 +193,17 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
     return null;
   }
 
-  InputDecoration _decoration(String label, {String? hint}) {
-    return InputDecoration(
-      labelText: label,
-      hintText: hint,
-      border: const OutlineInputBorder(),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(widget.isEdit ? 'Edit Kendaraan' : 'Tambah Kendaraan'),
+        backgroundColor: AppColors.surface,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
       ),
       body: Consumer<VehicleProvider>(
         builder: (context, provider, child) {
@@ -205,99 +212,128 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                TextFormField(
-                  controller: _nomorPolisiController,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: _decoration(
-                    'Nomor Polisi',
-                    hint: 'Contoh: BP 1234 XX',
-                  ),
-                  validator: (value) {
-                    return _requiredValidator(value, 'Nomor polisi');
-                  },
+                const SectionHeader(
+                  title: 'Informasi Utama',
+                  subtitle: 'Data wajib identitas sepeda motor Anda',
                 ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _merkController,
-                  decoration: _decoration('Merek', hint: 'Contoh: Honda'),
-                  validator: (value) {
-                    return _requiredValidator(value, 'Merek');
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _modelController,
-                  decoration: _decoration('Model', hint: 'Contoh: Vario 160'),
-                  validator: (value) {
-                    return _requiredValidator(value, 'Model');
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _tahunController,
-                  keyboardType: TextInputType.number,
-                  decoration: _decoration('Tahun', hint: 'Contoh: 2024'),
-                  validator: _yearValidator,
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _tipeMesinController,
-                  decoration: _decoration('Tipe Mesin', hint: 'Contoh: 160cc'),
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _transmisiController,
-                  decoration: _decoration(
-                    'Transmisi',
-                    hint: 'Contoh: Automatic',
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _warnaController,
-                  decoration: _decoration('Warna', hint: 'Contoh: Hitam'),
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _nomorRangkaController,
-                  decoration: _decoration('Nomor Rangka'),
-                ),
-                const SizedBox(height: 16),
-
-                TextFormField(
-                  controller: _catatanController,
-                  maxLines: 3,
-                  decoration: _decoration(
-                    'Catatan',
-                    hint: 'Catatan tambahan kendaraan',
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nomorPolisiController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(
+                          labelText: 'Nomor Polisi (Plat Motor)',
+                          hintText: 'Contoh: BP 1234 XY',
+                          prefixIcon: Icon(Icons.credit_card_outlined),
+                        ),
+                        validator: (value) =>
+                            _requiredValidator(value, 'Nomor polisi'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _merkController,
+                        decoration: const InputDecoration(
+                          labelText: 'Merk Kendaraan',
+                          hintText: 'Contoh: Honda, Yamaha, Suzuki',
+                          prefixIcon: Icon(Icons.branding_watermark_outlined),
+                        ),
+                        validator: (value) =>
+                            _requiredValidator(value, 'Merk kendaraan'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _modelController,
+                        decoration: const InputDecoration(
+                          labelText: 'Model / Tipe',
+                          hintText: 'Contoh: Vario 160, Beat, NMAX',
+                          prefixIcon: Icon(Icons.two_wheeler_outlined),
+                        ),
+                        validator: (value) =>
+                            _requiredValidator(value, 'Model kendaraan'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _tahunController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Tahun Pembuatan',
+                          hintText: 'Contoh: 2023',
+                          prefixIcon: Icon(Icons.calendar_today_outlined),
+                        ),
+                        validator: _yearValidator,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                SizedBox(
-                  height: 50,
-                  child: FilledButton(
-                    onPressed: provider.isLoading ? null : _submit,
-                    child: provider.isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            widget.isEdit
-                                ? 'Simpan Perubahan'
-                                : 'Tambah Kendaraan',
-                          ),
+                const SectionHeader(
+                  title: 'Spesifikasi Tambahan (Opsional)',
+                  subtitle: 'Detail mesin, transmisi, dan warna',
+                ),
+                PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _tipeMesinController,
+                        decoration: const InputDecoration(
+                          labelText: 'Kapasitas / Tipe Mesin',
+                          hintText: 'Contoh: 150cc, 4-tak',
+                          prefixIcon: Icon(Icons.speed_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _transmisiController,
+                        decoration: const InputDecoration(
+                          labelText: 'Transmisi',
+                          hintText: 'Contoh: Matic, Manual, Bebek',
+                          prefixIcon: Icon(Icons.tune_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _warnaController,
+                        decoration: const InputDecoration(
+                          labelText: 'Warna Motor',
+                          hintText: 'Contoh: Hitam Glossy, Merah',
+                          prefixIcon: Icon(Icons.palette_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _nomorRangkaController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nomor Rangka (VIN)',
+                          hintText: 'Opsional untuk kelengkapan administrasi',
+                          prefixIcon: Icon(Icons.qr_code_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _catatanController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Catatan Kendaraan',
+                          hintText: 'Riwayat modifikasi atau catatan khusus...',
+                          prefixIcon: Icon(Icons.notes_outlined),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 28),
+                PrimaryButton(
+                  text: widget.isEdit
+                      ? 'Simpan Perubahan'
+                      : 'Tambahkan Kendaraan',
+                  icon: Icons.check_circle_outline,
+                  isLoading: provider.isLoading,
+                  onPressed: provider.isLoading ? null : _submit,
+                ),
+                const SizedBox(height: 32),
               ],
             ),
           );
