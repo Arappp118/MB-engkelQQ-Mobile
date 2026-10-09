@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -17,50 +18,118 @@ class ApiClient {
     String endpoint, {
     Map<String, String>? queryParameters,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint')
-        .replace(queryParameters: queryParameters);
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint')
+          .replace(queryParameters: queryParameters);
 
-    final response = await http.get(uri, headers: await _headers());
+      final response = await http
+          .get(uri, headers: await _headers())
+          .timeout(ApiConstants.connectTimeout);
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw const ApiException(
+        message:
+            'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        message: 'Koneksi ke server timeout. Silakan coba beberapa saat lagi.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        message: 'Gagal berkomunikasi dengan server. Silakan periksa jaringan.',
+      );
+    }
   }
 
   Future<Map<String, dynamic>> post(
     String endpoint, {
     Map<String, dynamic>? body,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
 
-    final response = await http.post(
-      uri,
-      headers: await _headers(),
-      body: body == null ? null : jsonEncode(body),
-    );
+      final response = await http
+          .post(
+            uri,
+            headers: await _headers(),
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(ApiConstants.connectTimeout);
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw const ApiException(
+        message:
+            'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        message: 'Koneksi ke server timeout. Silakan coba beberapa saat lagi.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        message: 'Gagal berkomunikasi dengan server. Silakan periksa jaringan.',
+      );
+    }
   }
 
   Future<Map<String, dynamic>> put(
     String endpoint, {
     Map<String, dynamic>? body,
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
 
-    final response = await http.put(
-      uri,
-      headers: await _headers(),
-      body: body == null ? null : jsonEncode(body),
-    );
+      final response = await http
+          .put(
+            uri,
+            headers: await _headers(),
+            body: body == null ? null : jsonEncode(body),
+          )
+          .timeout(ApiConstants.connectTimeout);
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw const ApiException(
+        message:
+            'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        message: 'Koneksi ke server timeout. Silakan coba beberapa saat lagi.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        message: 'Gagal berkomunikasi dengan server. Silakan periksa jaringan.',
+      );
+    }
   }
 
   Future<Map<String, dynamic>> delete(String endpoint) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
 
-    final response = await http.delete(uri, headers: await _headers());
+      final response = await http
+          .delete(uri, headers: await _headers())
+          .timeout(ApiConstants.connectTimeout);
 
-    return _handleResponse(response);
+      return _handleResponse(response);
+    } on SocketException {
+      throw const ApiException(
+        message:
+            'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        message: 'Koneksi ke server timeout. Silakan coba beberapa saat lagi.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        message: 'Gagal berkomunikasi dengan server. Silakan periksa jaringan.',
+      );
+    }
   }
 
   Future<Map<String, dynamic>> postMultipart(
@@ -69,36 +138,55 @@ class ApiClient {
     String? filePath,
     String fileField = 'proof',
   }) async {
-    final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
 
-    final token = await _storage.getToken();
+      final token = await _storage.getToken();
 
-    final request = http.MultipartRequest('POST', uri);
+      final request = http.MultipartRequest('POST', uri);
 
-    request.headers['Accept'] = 'application/json';
+      request.headers['Accept'] = 'application/json';
 
-    if (token != null && token.isNotEmpty) {
-      request.headers['Authorization'] = 'Bearer $token';
-    }
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
 
-    request.fields.addAll(fields);
+      request.fields.addAll(fields);
 
-    if (filePath != null && filePath.isNotEmpty) {
-      final file = File(filePath);
+      if (filePath != null && filePath.isNotEmpty) {
+        final file = File(filePath);
 
-      if (!await file.exists()) {
-        throw const ApiException(
-          message: 'File bukti pembayaran tidak ditemukan.',
+        if (!await file.exists()) {
+          throw const ApiException(
+            message: 'File bukti pembayaran tidak ditemukan.',
+          );
+        }
+
+        request.files.add(
+          await http.MultipartFile.fromPath(fileField, filePath),
         );
       }
 
-      request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+      final streamedResponse = await request.send().timeout(
+        ApiConstants.connectTimeout,
+      );
+      final response = await http.Response.fromStream(streamedResponse);
+
+      return _handleResponse(response);
+    } on SocketException {
+      throw const ApiException(
+        message:
+            'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        message: 'Koneksi ke server timeout. Silakan coba beberapa saat lagi.',
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        message: 'Gagal berkomunikasi dengan server. Silakan periksa jaringan.',
+      );
     }
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    return _handleResponse(response);
   }
 
   Future<Map<String, String>> _headers() async {

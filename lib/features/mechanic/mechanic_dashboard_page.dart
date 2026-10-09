@@ -198,7 +198,7 @@ class _MechanicDashboardPageState extends State<MechanicDashboardPage> {
               )
               .length;
           final assignedCount = orders
-              .where((o) => o.status == 'assigned')
+              .where((o) => o.status == 'assigned' || o.status == 'pending')
               .length;
           final completedCount = orders
               .where((o) => o.status == 'completed' || o.status == 'paid')
@@ -633,7 +633,7 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
 
           final status = order.status ?? '';
 
-          final isAssigned = status == 'assigned';
+          final isAssigned = status == 'assigned' || status == 'pending';
           final isInProgress =
               status == 'in_progress' || status == 'in_service';
           final isCompleted = status == 'completed';

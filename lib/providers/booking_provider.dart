@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/errors/api_exception.dart';
 import '../models/booking.dart';
 import '../services/booking_service.dart';
 
@@ -166,6 +167,6 @@ class BookingProvider extends ChangeNotifier {
   }
 
   String _extractErrorMessage(Object error) {
-    return error.toString().replaceFirst('ApiException(null): ', '');
+    return ApiException.extractMessage(error);
   }
 }

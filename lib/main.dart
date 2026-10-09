@@ -27,14 +27,40 @@ class MBEngkelQQApp extends StatefulWidget {
 class _MBEngkelQQAppState extends State<MBEngkelQQApp> {
   late final AuthProvider _authProvider;
   late final AppRouter _appRouter;
+  late final DashboardProvider _dashboardProvider;
+  late final VehicleProvider _vehicleProvider;
+  late final BookingProvider _bookingProvider;
+  late final DeliveryProvider _deliveryProvider;
+  late final ServiceOrderProvider _serviceOrderProvider;
+  late final PaymentProvider _paymentProvider;
+  late final NotificationProvider _notificationProvider;
+  late final InvoiceProvider _invoiceProvider;
 
   @override
   void initState() {
     super.initState();
 
     _authProvider = AuthProvider();
-
     _appRouter = AppRouter(authProvider: _authProvider);
+    _dashboardProvider = DashboardProvider();
+    _vehicleProvider = VehicleProvider();
+    _bookingProvider = BookingProvider();
+    _deliveryProvider = DeliveryProvider();
+    _serviceOrderProvider = ServiceOrderProvider();
+    _paymentProvider = PaymentProvider();
+    _notificationProvider = NotificationProvider();
+    _invoiceProvider = InvoiceProvider();
+
+    _authProvider.registerLogoutCallback(() {
+      _dashboardProvider.clearDashboard();
+      _vehicleProvider.clearVehicles();
+      _bookingProvider.clearBookings();
+      _deliveryProvider.clearDeliveryTasks();
+      _serviceOrderProvider.clearServiceOrders();
+      _paymentProvider.clearPayment();
+      _notificationProvider.clearNotifications();
+      _invoiceProvider.clearInvoices();
+    });
 
     _initializeSession();
   }
@@ -50,6 +76,14 @@ class _MBEngkelQQAppState extends State<MBEngkelQQApp> {
   @override
   void dispose() {
     _authProvider.dispose();
+    _dashboardProvider.dispose();
+    _vehicleProvider.dispose();
+    _bookingProvider.dispose();
+    _deliveryProvider.dispose();
+    _serviceOrderProvider.dispose();
+    _paymentProvider.dispose();
+    _notificationProvider.dispose();
+    _invoiceProvider.dispose();
     _appRouter.router.dispose();
     super.dispose();
   }
@@ -59,30 +93,22 @@ class _MBEngkelQQAppState extends State<MBEngkelQQApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
-        ChangeNotifierProvider<DashboardProvider>(
-          create: (_) => DashboardProvider(),
+        ChangeNotifierProvider<DashboardProvider>.value(
+          value: _dashboardProvider,
         ),
-        ChangeNotifierProvider<VehicleProvider>(
-          create: (_) => VehicleProvider(),
+        ChangeNotifierProvider<VehicleProvider>.value(value: _vehicleProvider),
+        ChangeNotifierProvider<BookingProvider>.value(value: _bookingProvider),
+        ChangeNotifierProvider<DeliveryProvider>.value(
+          value: _deliveryProvider,
         ),
-        ChangeNotifierProvider<BookingProvider>(
-          create: (_) => BookingProvider(),
+        ChangeNotifierProvider<ServiceOrderProvider>.value(
+          value: _serviceOrderProvider,
         ),
-        ChangeNotifierProvider<DeliveryProvider>(
-          create: (_) => DeliveryProvider(),
+        ChangeNotifierProvider<PaymentProvider>.value(value: _paymentProvider),
+        ChangeNotifierProvider<NotificationProvider>.value(
+          value: _notificationProvider,
         ),
-        ChangeNotifierProvider<ServiceOrderProvider>(
-          create: (_) => ServiceOrderProvider(),
-        ),
-        ChangeNotifierProvider<PaymentProvider>(
-          create: (_) => PaymentProvider(),
-        ),
-        ChangeNotifierProvider<NotificationProvider>(
-          create: (_) => NotificationProvider(),
-        ),
-        ChangeNotifierProvider<InvoiceProvider>(
-          create: (_) => InvoiceProvider(),
-        ),
+        ChangeNotifierProvider<InvoiceProvider>.value(value: _invoiceProvider),
       ],
       child: MaterialApp.router(
         title: 'MB-engkelQQ Mobile',

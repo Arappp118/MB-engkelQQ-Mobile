@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/errors/api_exception.dart';
 import '../models/dashboard.dart';
 import '../services/dashboard_service.dart';
 
@@ -49,6 +50,6 @@ class DashboardProvider extends ChangeNotifier {
   }
 
   String _extractErrorMessage(Object error) {
-    return error.toString().replaceFirst('ApiException(null): ', '');
+    return ApiException.extractMessage(error);
   }
 }

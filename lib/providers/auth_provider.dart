@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/errors/api_exception.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -81,6 +82,12 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  final List<VoidCallback> _logoutCallbacks = [];
+
+  void registerLogoutCallback(VoidCallback callback) {
+    _logoutCallbacks.add(callback);
+  }
+
   Future<void> logout() async {
     _setLoading(true);
     _errorMessage = null;
@@ -91,6 +98,11 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = _extractErrorMessage(error);
     } finally {
       _user = null;
+      for (final callback in _logoutCallbacks) {
+        try {
+          callback();
+        } catch (_) {}
+      }
       _setLoading(false);
     }
   }
@@ -112,6 +124,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String _extractErrorMessage(Object error) {
-    return error.toString().replaceFirst('ApiException(null): ', '');
+    return ApiException.extractMessage(error);
   }
 }

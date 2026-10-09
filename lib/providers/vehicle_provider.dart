@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/errors/api_exception.dart';
 import '../models/vehicle.dart';
 import '../services/vehicle_service.dart';
 
@@ -180,6 +181,6 @@ class VehicleProvider extends ChangeNotifier {
   }
 
   String _extractErrorMessage(Object error) {
-    return error.toString().replaceFirst('ApiException(null): ', '');
+    return ApiException.extractMessage(error);
   }
 }

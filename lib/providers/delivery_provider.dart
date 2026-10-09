@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/errors/api_exception.dart';
 import '../models/delivery_task.dart';
 import '../services/delivery_service.dart';
 
@@ -161,6 +162,6 @@ class DeliveryProvider extends ChangeNotifier {
   }
 
   String _extractErrorMessage(Object error) {
-    return error.toString().replaceFirst('ApiException(null): ', '');
+    return ApiException.extractMessage(error);
   }
 }

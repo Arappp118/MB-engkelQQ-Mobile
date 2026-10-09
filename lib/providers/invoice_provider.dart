@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../core/errors/api_exception.dart';
 import '../models/invoice.dart';
 import '../services/invoice_service.dart';
 
@@ -60,12 +61,19 @@ class InvoiceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearInvoices() {
+    _invoices = [];
+    _selectedInvoice = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
   String _extractErrorMessage(Object error) {
-    return error.toString().replaceFirst('ApiException(null): ', '');
+    return ApiException.extractMessage(error);
   }
 }

@@ -156,8 +156,24 @@ class AppRouter {
     // SUDAH LOGIN
     // ==========================================================
 
-    if (isAuthenticated && currentPath == '/login') {
-      return _rolePath(authProvider.role);
+    if (isAuthenticated) {
+      if (currentPath == '/login') {
+        return _rolePath(authProvider.role);
+      }
+
+      final role = authProvider.role;
+      if (currentPath.startsWith('/admin') && role != 'admin') {
+        return _rolePath(role);
+      }
+      if (currentPath.startsWith('/mechanic') && role != 'mechanic') {
+        return _rolePath(role);
+      }
+      if (currentPath.startsWith('/courier') && role != 'courier') {
+        return _rolePath(role);
+      }
+      if (currentPath.startsWith('/customer') && role != 'customer') {
+        return _rolePath(role);
+      }
     }
 
     return null;
