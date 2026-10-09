@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mb_engkelqq_mobile/features/admin/payments/admin_payments_page.dart';
+import 'package:mb_engkelqq_mobile/models/booking.dart';
 import 'package:mb_engkelqq_mobile/models/payment.dart';
 import 'package:mb_engkelqq_mobile/models/service_order.dart';
+import 'package:mb_engkelqq_mobile/providers/booking_provider.dart';
 import 'package:mb_engkelqq_mobile/providers/payment_provider.dart';
 import 'package:mb_engkelqq_mobile/providers/service_order_provider.dart';
+import 'package:mb_engkelqq_mobile/services/booking_service.dart';
 import 'package:mb_engkelqq_mobile/services/payment_service.dart';
 import 'package:mb_engkelqq_mobile/services/service_order_service.dart';
 import 'package:provider/provider.dart';
@@ -16,12 +19,25 @@ class FakePaymentService extends PaymentService {
   String? lastReason;
 
   @override
+  Future<Payment> getPayment(int paymentId) async {
+    return Payment(
+      id: paymentId,
+      serviceOrderId: 101,
+      amount: 150000,
+      method: 'transfer',
+      status: 'waiting_verification',
+      hasProof: true,
+      notes: 'Transfer via BCA',
+    );
+  }
+
+  @override
   Future<Payment> verifyPayment(int id) async {
     verifyCalled = true;
     lastId = id;
     return Payment(
       id: id,
-      serviceOrderId: id,
+      serviceOrderId: 101,
       amount: 150000,
       status: 'verified',
     );
@@ -34,11 +50,37 @@ class FakePaymentService extends PaymentService {
     lastReason = reason;
     return Payment(
       id: id,
-      serviceOrderId: id,
+      serviceOrderId: 101,
       amount: 150000,
       status: 'rejected',
       notes: reason,
     );
+  }
+}
+
+class FakeBookingService extends BookingService {
+  @override
+  Future<List<Booking>> getBookings() async {
+    return [
+      const Booking(
+        id: 42,
+        vehicleId: 1,
+        nomorBooking: 'MC202610010001',
+        status: 'waiting_payment',
+        tanggal: '2026-10-09',
+        waktu: '10:00',
+        jenisLayanan: 'Servis Ringan',
+      ),
+      const Booking(
+        id: 43,
+        vehicleId: 1,
+        nomorBooking: 'MC202610010002',
+        status: 'paid',
+        tanggal: '2026-10-08',
+        waktu: '14:00',
+        jenisLayanan: 'Ganti Ban',
+      ),
+    ];
   }
 }
 
@@ -49,14 +91,14 @@ class FakeServiceOrderService extends ServiceOrderService {
       const ServiceOrder(
         id: 101,
         bookingId: 42,
-        status: 'waiting_payment',
+        status: 'completed',
         grandTotal: 150000,
         diagnosis: 'Ganti oli dan busi',
       ),
       const ServiceOrder(
         id: 102,
         bookingId: 43,
-        status: 'paid',
+        status: 'completed',
         grandTotal: 200000,
         diagnosis: 'Tune up',
       ),
@@ -89,14 +131,14 @@ void main() {
     final fakeService = FakePaymentService();
     final provider = PaymentProvider(paymentService: fakeService);
 
-    final verifySuccess = await provider.verifyPayment(101);
+    final verifySuccess = await provider.verifyPayment(7);
     expect(verifySuccess, isTrue);
     expect(fakeService.verifyCalled, isTrue);
-    expect(fakeService.lastId, 101);
+    expect(fakeService.lastId, 7);
     expect(provider.selectedPayment?.status, 'verified');
 
     final rejectSuccess = await provider.rejectPayment(
-      101,
+      7,
       reason: 'Bukti buram',
     );
     expect(rejectSuccess, isTrue);
@@ -105,52 +147,124 @@ void main() {
     expect(provider.selectedPayment?.status, 'rejected');
   });
 
-  testWidgets('AdminPaymentsPage displays waiting orders and triggers verify', (
-    tester,
-  ) async {
-    final fakePaymentService = FakePaymentService();
-    final fakeOrderService = FakeServiceOrderService();
+  testWidgets(
+    'AdminPaymentsPage displays bookings waiting for payment and triggers verify with genuine Payment ID',
+    (tester) async {
+      final fakePaymentService = FakePaymentService();
+      final fakeBookingService = FakeBookingService();
+      final fakeOrderService = FakeServiceOrderService();
 
-    final paymentProvider = PaymentProvider(paymentService: fakePaymentService);
-    final orderProvider = ServiceOrderProvider(
-      serviceOrderService: fakeOrderService,
-    );
+      final paymentProvider = PaymentProvider(
+        paymentService: fakePaymentService,
+      );
+      final bookingProvider = BookingProvider(
+        bookingService: fakeBookingService,
+      );
+      final orderProvider = ServiceOrderProvider(
+        serviceOrderService: fakeOrderService,
+      );
 
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<PaymentProvider>.value(value: paymentProvider),
-          ChangeNotifierProvider<ServiceOrderProvider>.value(
-            value: orderProvider,
-          ),
-        ],
-        child: const MaterialApp(home: AdminPaymentsPage()),
-      ),
-    );
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<PaymentProvider>.value(
+              value: paymentProvider,
+            ),
+            ChangeNotifierProvider<BookingProvider>.value(
+              value: bookingProvider,
+            ),
+            ChangeNotifierProvider<ServiceOrderProvider>.value(
+              value: orderProvider,
+            ),
+          ],
+          child: const MaterialApp(home: AdminPaymentsPage()),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    // Verify UI shows payment card
-    expect(find.text('Kelola Pembayaran'), findsOneWidget);
-    expect(find.text('Order #101'), findsOneWidget);
-    expect(find.text('Verifikasi'), findsOneWidget);
-    expect(find.text('Tolak'), findsOneWidget);
+      // Memverifikasi tampilan UI daftar pembayaran berbasis resource Booking
+      expect(find.text('Kelola Pembayaran'), findsOneWidget);
+      expect(find.text('Booking #MC202610010001'), findsOneWidget);
+      expect(find.text('Service Order #101'), findsOneWidget);
+      expect(find.text('Rp 150.000'), findsOneWidget);
+      expect(find.text('Verifikasi Pembayaran'), findsOneWidget);
 
-    // Tap verify button
-    await tester.tap(find.text('Verifikasi'));
-    await tester.pumpAndSettle();
+      // Menekan tombol verifikasi pembayaran
+      await tester.tap(find.text('Verifikasi Pembayaran'));
+      await tester.pumpAndSettle();
 
-    // Dialog appears
-    // Tap verify inside dialog
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.widgetWithText(FilledButton, 'Verifikasi'),
-      ),
-    );
-    await tester.pumpAndSettle();
+      // Dialog verifikasi muncul meminta input ID Pembayaran resmi
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('ID Pembayaran (Payment ID)'), findsOneWidget);
 
-    expect(fakePaymentService.verifyCalled, isTrue);
-    expect(fakePaymentService.lastId, 101);
-  });
+      // Memasukkan Payment ID = 7 (berbeda dari order.id 101 dan booking.id 42)
+      await tester.enterText(find.byType(TextField), '7');
+      await tester.pumpAndSettle();
+
+      // Menekan tombol Verifikasi di dalam dialog
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, 'Verifikasi'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Memastikan endpoint dipanggil dengan Payment ID = 7, bukan ID resource lain
+      expect(fakePaymentService.verifyCalled, isTrue);
+      expect(fakePaymentService.lastId, 7);
+    },
+  );
+
+  testWidgets(
+    'AdminPaymentsPage filter tabs switch between waiting and verified bookings',
+    (tester) async {
+      final fakePaymentService = FakePaymentService();
+      final fakeBookingService = FakeBookingService();
+      final fakeOrderService = FakeServiceOrderService();
+
+      final paymentProvider = PaymentProvider(
+        paymentService: fakePaymentService,
+      );
+      final bookingProvider = BookingProvider(
+        bookingService: fakeBookingService,
+      );
+      final orderProvider = ServiceOrderProvider(
+        serviceOrderService: fakeOrderService,
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<PaymentProvider>.value(
+              value: paymentProvider,
+            ),
+            ChangeNotifierProvider<BookingProvider>.value(
+              value: bookingProvider,
+            ),
+            ChangeNotifierProvider<ServiceOrderProvider>.value(
+              value: orderProvider,
+            ),
+          ],
+          child: const MaterialApp(home: AdminPaymentsPage()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Tab default adalah 'Menunggu'
+      expect(find.text('Booking #MC202610010001'), findsOneWidget);
+      expect(find.text('Booking #MC202610010002'), findsNothing);
+
+      // Beralih ke tab 'Terverifikasi'
+      await tester.tap(find.text('Terverifikasi'));
+      await tester.pumpAndSettle();
+
+      // Menampilkan booking berstatus 'paid'
+      expect(find.text('Booking #MC202610010001'), findsNothing);
+      expect(find.text('Booking #MC202610010002'), findsOneWidget);
+      expect(find.text('Pembayaran Terverifikasi'), findsOneWidget);
+    },
+  );
 }
