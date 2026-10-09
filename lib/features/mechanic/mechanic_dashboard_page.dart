@@ -633,7 +633,8 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
 
           final status = order.status ?? '';
 
-          final isAssigned = status == 'assigned' || status == 'pending';
+          final isPending = status == 'pending';
+          final isAssigned = status == 'assigned';
           final isInProgress =
               status == 'in_progress' || status == 'in_service';
           final isCompleted = status == 'completed';
@@ -642,7 +643,10 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
               order.diagnosis != null && order.diagnosis!.trim().isNotEmpty;
           final hasServiceItems = order.items.isNotEmpty;
 
-          final canStart = isAssigned;
+          // Sesuai kontrak backend (ServiceOrderService::startService),
+          // order hanya dapat dimulai dari status 'pending'.
+          // Status 'assigned' tidak otomatis dapat dimulai via endpoint start.
+          final canStart = isPending;
           final canComplete = isInProgress && hasDiagnosis && hasServiceItems;
 
           return RefreshIndicator(
@@ -1025,6 +1029,42 @@ class _MechanicServiceDetailPageState extends State<MechanicServiceDetailPage> {
                               fontSize: 13,
                             ),
                           ),
+                      ],
+                    ),
+                  ),
+
+                // ==================================================
+                // NOTICE STATUS ASSIGNED (TIDAK OTOMATIS DAPAT DIMULAI)
+                // ==================================================
+                if (isAssigned)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.infoContainer,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.info.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: AppColors.info,
+                          size: 20,
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Status service order adalah assigned. Berdasarkan aturan server, endpoint mulai servis hanya dapat diproses dari status pending.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
