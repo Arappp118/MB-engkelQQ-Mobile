@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/login_page.dart';
+import '../../features/settings/api_settings_page.dart';
 import '../../features/customer/customer_dashboard_page.dart';
 import '../../features/customer/invoices/customer_invoices_page.dart';
 import '../../features/customer/invoices/customer_invoice_detail_page.dart';
@@ -22,9 +23,19 @@ class AppRouter {
       redirect: _redirect,
       routes: [
         // ==========================================================
-        // LOGIN
+        // API SETTINGS
         // ==========================================================
 
+        GoRoute(
+          path: '/api-settings',
+          builder: (context, state) {
+            return const ApiSettingsPage();
+          },
+        ),
+
+        // ==========================================================
+        // LOGIN
+        // ==========================================================
         GoRoute(
           path: '/login',
           builder: (context, state) {
@@ -143,6 +154,11 @@ class AppRouter {
     final isAuthenticated = authProvider.isAuthenticated;
 
     final currentPath = state.uri.path;
+
+    // Allow accessing API settings page at all times
+    if (currentPath == '/api-settings') {
+      return null;
+    }
 
     // ==========================================================
     // BELUM LOGIN

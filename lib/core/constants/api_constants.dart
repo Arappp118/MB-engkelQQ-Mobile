@@ -1,3 +1,5 @@
+import '../config/api_config.dart';
+
 class ApiConstants {
   ApiConstants._();
 
@@ -5,7 +7,15 @@ class ApiConstants {
   // BASE URL
   // ============================================================
 
-  static const String baseUrl = 'http://10.0.2.2:8000/api/v1';
+  static const String defaultBaseUrl = ApiConfig.defaultBaseUrl;
+
+  static String get baseUrl => ApiConfig.instance.baseUrl;
+
+  // ============================================================
+  // HEALTH & CONNECTION TEST
+  // ============================================================
+
+  static const String health = '/health';
 
   // ============================================================
   // AUTH

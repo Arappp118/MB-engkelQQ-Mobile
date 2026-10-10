@@ -4,27 +4,34 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../config/api_config.dart';
 import '../constants/api_constants.dart';
 import '../errors/api_exception.dart';
 import '../storage/secure_storage.dart';
 
 class ApiClient {
-  ApiClient({SecureStorage? storage})
-    : _storage = storage ?? SecureStorage.instance;
+  ApiClient({SecureStorage? storage, ApiConfig? config, this.httpClient})
+    : _storage = storage ?? SecureStorage.instance,
+      _config = config ?? ApiConfig.instance;
 
   final SecureStorage _storage;
+  final ApiConfig _config;
+  final http.Client? httpClient;
+
+  String get baseUrl => _config.baseUrl;
 
   Future<Map<String, dynamic>> get(
     String endpoint, {
     Map<String, String>? queryParameters,
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint')
+      final uri = Uri.parse('${_config.baseUrl}$endpoint')
           .replace(queryParameters: queryParameters);
 
-      final response = await http
-          .get(uri, headers: await _headers())
-          .timeout(ApiConstants.connectTimeout);
+      final response =
+          await (httpClient?.get(uri, headers: await _headers()) ??
+                  http.get(uri, headers: await _headers()))
+              .timeout(ApiConstants.connectTimeout);
 
       return _handleResponse(response);
     } on SocketException {
@@ -48,15 +55,20 @@ class ApiClient {
     Map<String, dynamic>? body,
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final uri = Uri.parse('${_config.baseUrl}$endpoint');
 
-      final response = await http
-          .post(
-            uri,
-            headers: await _headers(),
-            body: body == null ? null : jsonEncode(body),
-          )
-          .timeout(ApiConstants.connectTimeout);
+      final response =
+          await (httpClient?.post(
+                    uri,
+                    headers: await _headers(),
+                    body: body == null ? null : jsonEncode(body),
+                  ) ??
+                  http.post(
+                    uri,
+                    headers: await _headers(),
+                    body: body == null ? null : jsonEncode(body),
+                  ))
+              .timeout(ApiConstants.connectTimeout);
 
       return _handleResponse(response);
     } on SocketException {
@@ -80,15 +92,20 @@ class ApiClient {
     Map<String, dynamic>? body,
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final uri = Uri.parse('${_config.baseUrl}$endpoint');
 
-      final response = await http
-          .put(
-            uri,
-            headers: await _headers(),
-            body: body == null ? null : jsonEncode(body),
-          )
-          .timeout(ApiConstants.connectTimeout);
+      final response =
+          await (httpClient?.put(
+                    uri,
+                    headers: await _headers(),
+                    body: body == null ? null : jsonEncode(body),
+                  ) ??
+                  http.put(
+                    uri,
+                    headers: await _headers(),
+                    body: body == null ? null : jsonEncode(body),
+                  ))
+              .timeout(ApiConstants.connectTimeout);
 
       return _handleResponse(response);
     } on SocketException {
@@ -109,11 +126,12 @@ class ApiClient {
 
   Future<Map<String, dynamic>> delete(String endpoint) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final uri = Uri.parse('${_config.baseUrl}$endpoint');
 
-      final response = await http
-          .delete(uri, headers: await _headers())
-          .timeout(ApiConstants.connectTimeout);
+      final response =
+          await (httpClient?.delete(uri, headers: await _headers()) ??
+                  http.delete(uri, headers: await _headers()))
+              .timeout(ApiConstants.connectTimeout);
 
       return _handleResponse(response);
     } on SocketException {
@@ -139,7 +157,7 @@ class ApiClient {
     String fileField = 'proof',
   }) async {
     try {
-      final uri = Uri.parse('${ApiConstants.baseUrl}$endpoint');
+      final uri = Uri.parse('${_config.baseUrl}$endpoint');
 
       final token = await _storage.getToken();
 
@@ -167,9 +185,10 @@ class ApiClient {
         );
       }
 
-      final streamedResponse = await request.send().timeout(
-        ApiConstants.connectTimeout,
-      );
+      final streamedResponse =
+          await (httpClient?.send(request) ?? request.send()).timeout(
+            ApiConstants.connectTimeout,
+          );
       final response = await http.Response.fromStream(streamedResponse);
 
       return _handleResponse(response);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/config/api_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_buttons.dart';
 import '../../core/widgets/premium_card.dart';
@@ -46,9 +48,24 @@ class _LoginPageState extends State<LoginPage> {
 
     if (!success) {
       final message = authProvider.errorMessage ?? 'Login gagal.';
+      final isNetworkIssue =
+          message.toLowerCase().contains('terhubung') ||
+          message.toLowerCase().contains('timeout') ||
+          message.toLowerCase().contains('jaringan') ||
+          message.toLowerCase().contains('server');
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppColors.error),
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.error,
+          action: isNetworkIssue
+              ? SnackBarAction(
+                  label: 'Atur Server',
+                  textColor: Colors.white,
+                  onPressed: () => context.push('/api-settings'),
+                )
+              : null,
+        ),
       );
     }
   }
@@ -59,6 +76,18 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.dns_rounded),
+            color: AppColors.textSecondary,
+            tooltip: 'Pengaturan Server API',
+            onPressed: () => context.push('/api-settings'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -224,7 +253,25 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () => context.push('/api-settings'),
+                      icon: const Icon(
+                        Icons.settings_ethernet_rounded,
+                        size: 15,
+                        color: AppColors.textMuted,
+                      ),
+                      label: Text(
+                        'Server API: ${ApiConfig.instance.baseUrl}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const Center(
                     child: Text(
                       'Tanjungpinang • Kepulauan Riau',

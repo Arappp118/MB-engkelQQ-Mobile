@@ -21,6 +21,7 @@ import 'bookings/customer_create_booking_page.dart';
 import 'invoices/customer_invoices_page.dart';
 import 'vehicles/customer_vehicles_page.dart';
 import '../notifications/notification_center_page.dart';
+import '../settings/api_settings_page.dart';
 
 class CustomerDashboardPage extends StatefulWidget {
   const CustomerDashboardPage({super.key});
@@ -212,6 +213,15 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
           );
         },
         actions: [
+          IconButton(
+            tooltip: 'Pengaturan Server API',
+            icon: const Icon(Icons.dns_rounded, color: AppColors.textSecondary),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ApiSettingsPage()),
+              );
+            },
+          ),
           IconButton(
             tooltip: 'Logout',
             icon: const Icon(Icons.logout, color: AppColors.textSecondary),

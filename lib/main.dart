@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'core/config/api_config.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
@@ -13,7 +14,9 @@ import 'providers/payment_provider.dart';
 import 'providers/service_order_provider.dart';
 import 'providers/vehicle_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiConfig.instance.initialize();
   runApp(const MBEngkelQQApp());
 }
 
@@ -66,6 +69,10 @@ class _MBEngkelQQAppState extends State<MBEngkelQQApp> {
   }
 
   Future<void> _initializeSession() async {
+    if (!ApiConfig.instance.isInitialized) {
+      await ApiConfig.instance.initialize();
+    }
+
     final hasSession = await _authProvider.hasSession();
 
     if (hasSession) {
@@ -92,6 +99,7 @@ class _MBEngkelQQAppState extends State<MBEngkelQQApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider<ApiConfig>.value(value: ApiConfig.instance),
         ChangeNotifierProvider<AuthProvider>.value(value: _authProvider),
         ChangeNotifierProvider<DashboardProvider>.value(
           value: _dashboardProvider,
