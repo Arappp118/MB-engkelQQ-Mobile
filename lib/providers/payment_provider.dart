@@ -11,11 +11,22 @@ class PaymentProvider extends ChangeNotifier {
   final PaymentService _paymentService;
 
   Payment? _selectedPayment;
+  final Map<int, Payment> _paymentsByOrderId = {};
+  final Map<int, Payment> _paymentsById = {};
 
   bool _isLoading = false;
   String? _errorMessage;
 
   Payment? get selectedPayment => _selectedPayment;
+  Payment? getPaymentForOrder(int orderId) => _paymentsByOrderId[orderId];
+  Payment? getPaymentById(int id) => _paymentsById[id];
+
+  void cachePayment(Payment payment) {
+    if (payment.serviceOrderId != null) {
+      _paymentsByOrderId[payment.serviceOrderId!] = payment;
+    }
+    _paymentsById[payment.id] = payment;
+  }
 
   bool get isLoading => _isLoading;
 
@@ -26,7 +37,9 @@ class PaymentProvider extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      _selectedPayment = await _paymentService.getPayment(id);
+      final payment = await _paymentService.getPayment(id);
+      _selectedPayment = payment;
+      cachePayment(payment);
       return true;
     } catch (error) {
       _errorMessage = _extractErrorMessage(error);
@@ -45,11 +58,13 @@ class PaymentProvider extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      _selectedPayment = await _paymentService.createPayment(
+      final payment = await _paymentService.createPayment(
         serviceOrderId: serviceOrderId,
         method: method,
         proofPath: proofPath,
       );
+      _selectedPayment = payment;
+      cachePayment(payment);
 
       return true;
     } catch (error) {
@@ -65,7 +80,15 @@ class PaymentProvider extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      _selectedPayment = await _paymentService.verifyPayment(id);
+      final payment = await _paymentService.verifyPayment(id);
+      _selectedPayment = payment;
+      cachePayment(payment);
+
+      if (payment.status?.toLowerCase() != 'verified') {
+        _errorMessage =
+            'Status pembayaran dari server bukan terverifikasi: ${payment.status}';
+        return false;
+      }
 
       return true;
     } catch (error) {
@@ -81,10 +104,12 @@ class PaymentProvider extends ChangeNotifier {
     _errorMessage = null;
 
     try {
-      _selectedPayment = await _paymentService.rejectPayment(
+      final payment = await _paymentService.rejectPayment(
         id,
         reason: reason,
       );
+      _selectedPayment = payment;
+      cachePayment(payment);
 
       return true;
     } catch (error) {

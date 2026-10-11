@@ -9,7 +9,7 @@ class StatusBadge extends StatelessWidget {
   final String? customLabel;
 
   static Color getStatusColor(String rawStatus) {
-    final s = rawStatus.toLowerCase();
+    final s = rawStatus.toLowerCase().trim();
     if (s.contains('verified') ||
         s.contains('selesai') ||
         s.contains('completed') ||
@@ -31,11 +31,36 @@ class StatusBadge extends StatelessWidget {
         s.contains('failed')) {
       return AppColors.error;
     }
-    // Default cyan for in-progress, confirmed, assigned, on the way, etc.
+    // Default secondary for in-progress, confirmed, assigned, vehicle_picked_up, etc.
     return AppColors.secondary;
   }
 
   static String formatStatusLabel(String rawStatus) {
+    final s = rawStatus.toLowerCase().trim();
+    const Map<String, String> officialLabels = {
+      'pending': 'Menunggu Konfirmasi',
+      'confirmed': 'Dikonfirmasi',
+      'waiting_pickup': 'Menunggu Pickup',
+      'vehicle_picked_up': 'Kendaraan Dijemput',
+      'waiting_service': 'Menunggu Servis',
+      'assigned': 'Ditugaskan',
+      'in_service': 'Sedang Diservis',
+      'in_progress': 'Sedang Berjalan',
+      'service_completed': 'Servis Selesai',
+      'waiting_payment': 'Menunggu Pembayaran',
+      'waiting_verification': 'Menunggu Verifikasi',
+      'paid': 'Dibayar',
+      'verified': 'Terverifikasi',
+      'ready_for_delivery': 'Siap Diambil/Diantar',
+      'completed': 'Selesai',
+      'cancelled': 'Dibatalkan',
+      'rejected': 'Ditolak',
+    };
+
+    if (officialLabels.containsKey(s)) {
+      return officialLabels[s]!;
+    }
+
     return rawStatus
         .replaceAll('_', ' ')
         .split(' ')

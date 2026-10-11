@@ -120,12 +120,12 @@ class BookingProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> cancelBooking(int id) async {
+  Future<bool> cancelBooking(int id, {String? reason}) async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      final booking = await _bookingService.cancelBooking(id);
+      final booking = await _bookingService.cancelBooking(id, reason: reason);
 
       _bookings = _bookings
           .map((item) => item.id == id ? booking : item)

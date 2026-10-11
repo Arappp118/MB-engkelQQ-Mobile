@@ -17,6 +17,17 @@ class Dashboard {
     this.activeTotal,
     this.completedTotal,
     this.activeTasks,
+    this.totalCustomers,
+    this.totalVehicles,
+    this.totalBookings,
+    this.totalServiceOrders,
+    this.paymentPending,
+    this.paymentVerified,
+    this.deliveryTaskTotal,
+    this.invoiceTotal,
+    this.mechanicTotal,
+    this.courierTotal,
+    this.serviceItemTotal,
     this.data,
   });
 
@@ -41,6 +52,19 @@ class Dashboard {
   final int? completedTotal;
   final List<dynamic>? activeTasks;
 
+  // Admin operational metrics
+  final int? totalCustomers;
+  final int? totalVehicles;
+  final int? totalBookings;
+  final int? totalServiceOrders;
+  final int? paymentPending;
+  final int? paymentVerified;
+  final int? deliveryTaskTotal;
+  final int? invoiceTotal;
+  final int? mechanicTotal;
+  final int? courierTotal;
+  final int? serviceItemTotal;
+
   final Map<String, dynamic>? data;
 
   factory Dashboard.fromJson(Map<String, dynamic> json) {
@@ -62,6 +86,17 @@ class Dashboard {
       activeTotal: _toInt(json['active_total']),
       completedTotal: _toInt(json['completed_total']),
       activeTasks: _toList(json['active_tasks']),
+      totalCustomers: _toInt(json['total_customers']),
+      totalVehicles: _toInt(json['total_vehicles']),
+      totalBookings: _toInt(json['total_bookings']),
+      totalServiceOrders: _toInt(json['total_service_orders']),
+      paymentPending: _toInt(json['payment_pending']),
+      paymentVerified: _toInt(json['payment_verified']),
+      deliveryTaskTotal: _toInt(json['delivery_task_total']),
+      invoiceTotal: _toInt(json['invoice_total']),
+      mechanicTotal: _toInt(json['mechanic_total']),
+      courierTotal: _toInt(json['courier_total']),
+      serviceItemTotal: _toInt(json['service_item_total']),
       data: _toMap(json['data']),
     );
   }
@@ -85,6 +120,17 @@ class Dashboard {
       'active_total': activeTotal,
       'completed_total': completedTotal,
       'active_tasks': activeTasks,
+      'total_customers': totalCustomers,
+      'total_vehicles': totalVehicles,
+      'total_bookings': totalBookings,
+      'total_service_orders': totalServiceOrders,
+      'payment_pending': paymentPending,
+      'payment_verified': paymentVerified,
+      'delivery_task_total': deliveryTaskTotal,
+      'invoice_total': invoiceTotal,
+      'mechanic_total': mechanicTotal,
+      'courier_total': courierTotal,
+      'service_item_total': serviceItemTotal,
       'data': data,
     };
   }

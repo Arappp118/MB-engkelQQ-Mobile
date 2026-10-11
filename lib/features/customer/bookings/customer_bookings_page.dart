@@ -6,7 +6,9 @@ import '../../../core/widgets/app_states.dart';
 import '../../../core/widgets/premium_card.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../../models/booking.dart';
+import '../../../models/service_order.dart';
 import '../../../providers/booking_provider.dart';
+import '../../../providers/service_order_provider.dart';
 import 'customer_booking_detail_page.dart';
 import 'customer_create_booking_page.dart';
 
@@ -23,12 +25,15 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<BookingProvider>().loadBookings();
+      _refreshBookings();
     });
   }
 
   Future<void> _refreshBookings() async {
-    await context.read<BookingProvider>().loadBookings();
+    await Future.wait([
+      context.read<BookingProvider>().loadBookings(),
+      context.read<ServiceOrderProvider>().loadServiceOrders(),
+    ]);
   }
 
   @override
@@ -56,16 +61,17 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
           ),
         ],
       ),
-      body: Consumer<BookingProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading && provider.bookings.isEmpty) {
+      body: Consumer2<BookingProvider, ServiceOrderProvider>(
+        builder: (context, bookingProvider, serviceOrderProvider, child) {
+          if (bookingProvider.isLoading && bookingProvider.bookings.isEmpty) {
             return const LoadingState(
               height: 350,
               message: 'Memuat riwayat booking...',
             );
           }
 
-          if (provider.errorMessage != null && provider.bookings.isEmpty) {
+          if (bookingProvider.errorMessage != null &&
+              bookingProvider.bookings.isEmpty) {
             return RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _refreshBookings,
@@ -76,7 +82,7 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
                   const SizedBox(height: 60),
                   ErrorState(
                     title: 'Gagal Memuat Booking',
-                    message: provider.errorMessage!,
+                    message: bookingProvider.errorMessage!,
                     onRetry: _refreshBookings,
                   ),
                 ],
@@ -84,7 +90,7 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
             );
           }
 
-          if (provider.bookings.isEmpty) {
+          if (bookingProvider.bookings.isEmpty) {
             return RefreshIndicator(
               color: AppColors.primary,
               onRefresh: _refreshBookings,
@@ -118,13 +124,17 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
             child: ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
-              itemCount: provider.bookings.length,
+              itemCount: bookingProvider.bookings.length,
               separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final booking = provider.bookings[index];
+                final booking = bookingProvider.bookings[index];
+                final relatedOrder = serviceOrderProvider.serviceOrders
+                    .where((so) => so.bookingId == booking.id)
+                    .firstOrNull;
 
                 return _BookingCard(
                   booking: booking,
+                  serviceOrder: relatedOrder,
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
@@ -144,13 +154,23 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage> {
 }
 
 class _BookingCard extends StatelessWidget {
-  const _BookingCard({required this.booking, required this.onTap});
+  const _BookingCard({
+    required this.booking,
+    this.serviceOrder,
+    required this.onTap,
+  });
 
   final Booking booking;
+  final ServiceOrder? serviceOrder;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final vehicleDesc = booking.vehicle != null
+        ? '${booking.vehicle!.nomorPolisi} • ${booking.vehicle!.merk} ${booking.vehicle!.model}'
+            .trim()
+        : null;
+
     return PremiumCard(
       onTap: onTap,
       padding: const EdgeInsets.all(16),
@@ -210,6 +230,22 @@ class _BookingCard extends StatelessWidget {
             label: 'Jadwal Servis',
             value: '${booking.tanggal ?? '-'} • ${booking.waktu ?? '-'}',
           ),
+          if (vehicleDesc != null && vehicleDesc.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _InfoRow(
+              icon: Icons.two_wheeler_outlined,
+              label: 'Kendaraan',
+              value: vehicleDesc,
+            ),
+          ],
+          if (serviceOrder?.mechanicId != null) ...[
+            const SizedBox(height: 8),
+            _InfoRow(
+              icon: Icons.engineering_outlined,
+              label: 'Mekanik Ditugaskan',
+              value: 'Mekanik #${serviceOrder!.mechanicId}',
+            ),
+          ],
           const SizedBox(height: 8),
           _InfoRow(
             icon: booking.pickupRequested == true
@@ -227,6 +263,77 @@ class _BookingCard extends StatelessWidget {
               icon: Icons.location_on_outlined,
               label: 'Alamat Pickup',
               value: booking.alamatPickup!,
+            ),
+          ],
+          if (booking.status == 'vehicle_picked_up') ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.secondaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.two_wheeler_outlined, size: 16, color: AppColors.secondary),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Motor telah dijemput kurir & diserahkan ke bengkel. Menunggu penugasan mekanik dari sistem sebelum servis dimulai.',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (booking.status == 'service_completed') ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.receipt_long, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      serviceOrder?.grandTotal != null
+                          ? 'Servis selesai • Total tagihan: Rp ${serviceOrder!.grandTotal!.round().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} (Ketuk untuk bayar)'
+                          : 'Servis selesai • Tagihan siap dibayar (Ketuk untuk rincian)',
+                      style: const TextStyle(fontSize: 11, color: AppColors.primaryLight, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (booking.status == 'waiting_payment') ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.warningContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.access_time_rounded, size: 16, color: AppColors.warning),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pembayaran diajukan • Menunggu verifikasi admin',
+                      style: TextStyle(fontSize: 11, color: AppColors.warning, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
           if (booking.keluhan != null && booking.keluhan!.isNotEmpty) ...[

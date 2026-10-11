@@ -59,50 +59,58 @@ class FakePaymentService extends PaymentService {
 }
 
 class FakeBookingService extends BookingService {
+  final List<Booking>? customBookings;
+  FakeBookingService({this.customBookings});
+
   @override
   Future<List<Booking>> getBookings() async {
-    return [
-      const Booking(
-        id: 42,
-        vehicleId: 1,
-        nomorBooking: 'MC202610010001',
-        status: 'waiting_payment',
-        tanggal: '2026-10-09',
-        waktu: '10:00',
-        jenisLayanan: 'Servis Ringan',
-      ),
-      const Booking(
-        id: 43,
-        vehicleId: 1,
-        nomorBooking: 'MC202610010002',
-        status: 'paid',
-        tanggal: '2026-10-08',
-        waktu: '14:00',
-        jenisLayanan: 'Ganti Ban',
-      ),
-    ];
+    return customBookings ??
+        [
+          const Booking(
+            id: 42,
+            vehicleId: 1,
+            nomorBooking: 'MC202610010001',
+            status: 'waiting_payment',
+            tanggal: '2026-10-09',
+            waktu: '10:00',
+            jenisLayanan: 'Servis Ringan',
+          ),
+          const Booking(
+            id: 43,
+            vehicleId: 1,
+            nomorBooking: 'MC202610010002',
+            status: 'paid',
+            tanggal: '2026-10-08',
+            waktu: '14:00',
+            jenisLayanan: 'Ganti Ban',
+          ),
+        ];
   }
 }
 
 class FakeServiceOrderService extends ServiceOrderService {
+  final List<ServiceOrder>? customOrders;
+  FakeServiceOrderService({this.customOrders});
+
   @override
   Future<List<ServiceOrder>> getServiceOrders() async {
-    return [
-      const ServiceOrder(
-        id: 101,
-        bookingId: 42,
-        status: 'completed',
-        grandTotal: 150000,
-        diagnosis: 'Ganti oli dan busi',
-      ),
-      const ServiceOrder(
-        id: 102,
-        bookingId: 43,
-        status: 'completed',
-        grandTotal: 200000,
-        diagnosis: 'Tune up',
-      ),
-    ];
+    return customOrders ??
+        [
+          const ServiceOrder(
+            id: 101,
+            bookingId: 42,
+            status: 'completed',
+            grandTotal: 150000,
+            diagnosis: 'Ganti oli dan busi',
+          ),
+          const ServiceOrder(
+            id: 102,
+            bookingId: 43,
+            status: 'completed',
+            grandTotal: 200000,
+            diagnosis: 'Tune up',
+          ),
+        ];
   }
 }
 
@@ -265,6 +273,186 @@ void main() {
       expect(find.text('Booking #MC202610010001'), findsNothing);
       expect(find.text('Booking #MC202610010002'), findsOneWidget);
       expect(find.text('Pembayaran Terverifikasi'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'AdminPaymentsPage correctly displays service_completed as Menunggu Pembayaran Customer and waiting_payment as Menunggu Verifikasi Admin',
+    (tester) async {
+      final fakePaymentService = FakePaymentService();
+      final fakeBookingService = FakeBookingService(
+        customBookings: [
+          const Booking(
+            id: 42,
+            vehicleId: 1,
+            nomorBooking: 'MC202610010001',
+            status: 'waiting_payment',
+            tanggal: '2026-10-09',
+            waktu: '10:00',
+            jenisLayanan: 'Servis Ringan',
+          ),
+          const Booking(
+            id: 44,
+            vehicleId: 1,
+            nomorBooking: 'MC202610010003',
+            status: 'service_completed',
+            tanggal: '2026-10-09',
+            waktu: '11:00',
+            jenisLayanan: 'Ganti Aki',
+          ),
+        ],
+      );
+      final fakeOrderService = FakeServiceOrderService(
+        customOrders: [
+          const ServiceOrder(
+            id: 101,
+            bookingId: 42,
+            status: 'completed',
+            grandTotal: 150000,
+          ),
+          const ServiceOrder(
+            id: 103,
+            bookingId: 44,
+            status: 'completed',
+            grandTotal: 300000,
+          ),
+        ],
+      );
+
+      final paymentProvider = PaymentProvider(
+        paymentService: fakePaymentService,
+      );
+      final bookingProvider = BookingProvider(
+        bookingService: fakeBookingService,
+      );
+      final orderProvider = ServiceOrderProvider(
+        serviceOrderService: fakeOrderService,
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<PaymentProvider>.value(
+              value: paymentProvider,
+            ),
+            ChangeNotifierProvider<BookingProvider>.value(
+              value: bookingProvider,
+            ),
+            ChangeNotifierProvider<ServiceOrderProvider>.value(
+              value: orderProvider,
+            ),
+          ],
+          child: const MaterialApp(home: AdminPaymentsPage()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Tab 'Menunggu' menampilkan kedua booking dengan badge dan aksi yang sesuai
+      expect(find.text('Booking #MC202610010001'), findsOneWidget);
+      expect(find.text('Menunggu Verifikasi Admin'), findsOneWidget);
+      expect(find.text('Verifikasi Pembayaran'), findsOneWidget);
+
+      expect(find.text('Booking #MC202610010003'), findsOneWidget);
+      expect(find.text('Menunggu Pembayaran Customer'), findsOneWidget);
+      expect(find.text('Input Verifikasi Manual'), findsOneWidget);
+
+      // Beralih ke tab 'Semua', keduanya tetap tampil
+      await tester.tap(find.text('Semua'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Booking #MC202610010001'), findsOneWidget);
+      expect(find.text('Booking #MC202610010003'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'AdminPaymentsPage distinguishes official rejected payment from cancelled booking',
+    (tester) async {
+      final fakePaymentService = FakePaymentService();
+      final fakeBookingService = FakeBookingService(
+        customBookings: [
+          const Booking(
+            id: 50,
+            vehicleId: 1,
+            nomorBooking: 'MC-CANCELLED',
+            status: 'cancelled',
+            cancellationReason: 'Pelanggan membatalkan reservasi',
+          ),
+          const Booking(
+            id: 51,
+            vehicleId: 1,
+            nomorBooking: 'MC-PAYMENT-REJECTED',
+            status: 'waiting_payment',
+          ),
+        ],
+      );
+      final fakeOrderService = FakeServiceOrderService(
+        customOrders: [
+          const ServiceOrder(
+            id: 201,
+            bookingId: 51,
+            status: 'completed',
+            grandTotal: 175000,
+          ),
+        ],
+      );
+
+      final paymentProvider = PaymentProvider(
+        paymentService: fakePaymentService,
+      );
+      // Cache official payment dengan status rejected
+      paymentProvider.cachePayment(
+        const Payment(
+          id: 99,
+          serviceOrderId: 201,
+          amount: 175000,
+          status: 'rejected',
+          notes: 'Foto bukti tidak terbaca',
+        ),
+      );
+
+      final bookingProvider = BookingProvider(
+        bookingService: fakeBookingService,
+      );
+      final orderProvider = ServiceOrderProvider(
+        serviceOrderService: fakeOrderService,
+      );
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<PaymentProvider>.value(
+              value: paymentProvider,
+            ),
+            ChangeNotifierProvider<BookingProvider>.value(
+              value: bookingProvider,
+            ),
+            ChangeNotifierProvider<ServiceOrderProvider>.value(
+              value: orderProvider,
+            ),
+          ],
+          child: const MaterialApp(home: AdminPaymentsPage()),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Beralih ke tab 'Dibatalkan'
+      await tester.tap(find.text('Dibatalkan'));
+      await tester.pumpAndSettle();
+
+      // Booking 50 berstatus booking cancelled
+      expect(find.text('Booking #MC-CANCELLED'), findsOneWidget);
+      expect(find.text('Booking Dibatalkan'), findsWidgets);
+
+      // Booking 51 memiliki data resmi rejected payment
+      expect(find.text('Booking #MC-PAYMENT-REJECTED'), findsOneWidget);
+      expect(find.text('Pembayaran Ditolak'), findsOneWidget);
+      expect(
+        find.textContaining('Foto bukti tidak terbaca'),
+        findsOneWidget,
+      );
     },
   );
 }

@@ -139,6 +139,25 @@ void main() {
         'http://192.168.1.19:8000/api/v1',
       );
     });
+
+    test('auto-assigns port 8000 for local LAN development IPs when omitted', () {
+      expect(
+        ApiConfig.normalizeUrl('http://192.168.1.19/api/v1'),
+        'http://192.168.1.19:8000/api/v1',
+      );
+      expect(
+        ApiConfig.normalizeUrl('http://192.168.1.19'),
+        'http://192.168.1.19:8000/api/v1',
+      );
+      expect(
+        ApiConfig.normalizeUrl('192.168.1.19:8000/api/v1'),
+        'http://192.168.1.19:8000/api/v1',
+      );
+      expect(
+        ApiConfig.normalizeUrl('192.168.1.19'),
+        'http://192.168.1.19:8000/api/v1',
+      );
+    });
   });
 
   group('Dynamic API Base URL - Persistence & Storage Isolation', () {

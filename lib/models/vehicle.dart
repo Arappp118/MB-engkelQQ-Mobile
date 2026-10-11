@@ -25,12 +25,16 @@ class Vehicle {
   final String? nomorRangka;
   final String? catatan;
 
+  String get licensePlate => nomorPolisi;
+  String get brand => merk;
+
   factory Vehicle.fromJson(Map<String, dynamic> json) {
     return Vehicle(
       id: _toInt(json['id']) ?? 0,
       userId: _toInt(json['user_id']) ?? 0,
-      nomorPolisi: json['nomor_polisi']?.toString() ?? '',
-      merk: json['merk']?.toString() ?? '',
+      nomorPolisi:
+          (json['nomor_polisi'] ?? json['license_plate'])?.toString() ?? '',
+      merk: (json['merk'] ?? json['brand'])?.toString() ?? '',
       model: json['model']?.toString() ?? '',
       tahun: _toInt(json['tahun']),
       tipeMesin: json['tipe_mesin']?.toString(),

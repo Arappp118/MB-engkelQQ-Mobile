@@ -126,7 +126,7 @@ class FakeDeliveryService extends DeliveryService {
   }
 
   @override
-  Future<DeliveryTask> completeDeliveryTask(int id) async {
+  Future<DeliveryTask> completeDeliveryTask(int id, {String? notes}) async {
     if (shouldThrow) {
       throw ApiException(message: errorMessage, statusCode: 422);
     }

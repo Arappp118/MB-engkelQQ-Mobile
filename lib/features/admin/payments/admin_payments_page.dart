@@ -41,12 +41,17 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
 
   Future<void> _showVerifyPaymentDialog(
     Booking booking,
-    ServiceOrder? order,
-  ) async {
+    ServiceOrder? order, {
+    Payment? payment,
+  }) async {
     final action = await showDialog<String>(
       context: context,
       builder: (dialogContext) =>
-          _PaymentVerifyOrRejectDialog(booking: booking, order: order),
+          _PaymentVerifyOrRejectDialog(
+            booking: booking,
+            order: order,
+            payment: payment,
+          ),
     );
 
     if (action == null || !mounted) return;
@@ -72,6 +77,57 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
 
   Future<void> _executeVerify(int paymentId) async {
     final provider = context.read<PaymentProvider>();
+
+    // Pre-check payment status if possible to avoid 422 runtime exception
+    final loaded = await provider.loadPayment(paymentId);
+    if (!mounted) return;
+
+    if (loaded && provider.selectedPayment != null) {
+      final currentPayment = provider.selectedPayment!;
+      if (currentPayment.status == 'verified') {
+        showDialog<void>(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            backgroundColor: AppColors.surfaceCard,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: AppColors.success),
+                SizedBox(width: 8),
+                Text('Sudah Terverifikasi'),
+              ],
+            ),
+            content: Text(
+              'Pembayaran #$paymentId sudah berstatus TERVERIFIKASI pada ${currentPayment.verifiedAt ?? 'database'}.\n\nTotal: ${_AdminPaymentsPageState._formatCurrency(currentPayment.amount)}.',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop();
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        _loadData();
+        return;
+      } else if (currentPayment.status == 'rejected') {
+        _showErrorSnackBar(
+          'Pembayaran #$paymentId berstatus DITOLAK (Catatan: ${currentPayment.notes ?? '-'}). Tidak dapat diverifikasi.',
+        );
+        return;
+      }
+    }
+
     final success = await provider.verifyPayment(paymentId);
 
     if (!mounted) return;
@@ -85,9 +141,45 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
       );
       _loadData();
     } else {
-      _showErrorSnackBar(
-        provider.errorMessage ?? 'Gagal memverifikasi pembayaran.',
-      );
+      final err = provider.errorMessage ?? '';
+      if (err.contains("status 'verified'") || err.contains('verified')) {
+        showDialog<void>(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            backgroundColor: AppColors.surfaceCard,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.border),
+            ),
+            title: const Row(
+              children: [
+                Icon(Icons.info_outline, color: AppColors.info),
+                SizedBox(width: 8),
+                Text('Status Pembayaran'),
+              ],
+            ),
+            content: Text(
+              'Pembayaran #$paymentId telah berstatus TERVERIFIKASI di server (HTTP 422: tidak dapat verifikasi ulang).\n\nData lokal diperbarui.',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Tutup'),
+              ),
+            ],
+          ),
+        );
+        _loadData();
+      } else {
+        _showErrorSnackBar(
+          provider.errorMessage ?? 'Gagal memverifikasi pembayaran.',
+        );
+      }
     }
   }
 
@@ -299,7 +391,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
           IconButton(
             tooltip: 'Delivery Tasks',
             icon: const Icon(Icons.local_shipping_outlined),
-            onPressed: () => context.push('/admin/delivery'),
+            onPressed: () => context.go('/admin/delivery'),
           ),
         ],
       ),
@@ -315,7 +407,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
             case 1:
               break;
             case 2:
-              context.push('/admin/delivery');
+              context.go('/admin/delivery');
               break;
             case 3:
               context.push('/notifications');
@@ -373,7 +465,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Status pembayaran merujuk pada status Booking (waiting_payment/paid). Untuk eksekusi verifikasi via API, masukkan ID Pembayaran resmi.',
+              'Menampilkan transaksi servis selesai & pengajuan pembayaran. Untuk verifikasi via API, masukkan ID Pembayaran resmi.',
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
@@ -468,20 +560,35 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
 
     final filtered = bookings.where((b) {
       final status = b.status?.toLowerCase();
+      final matchedOrder = _findOrderForBooking(orders, b.id);
+      final payment = matchedOrder != null
+          ? paymentProvider.getPaymentForOrder(matchedOrder.id)
+          : null;
+      final paymentStatus = payment?.status?.toLowerCase();
+
       if (_selectedFilter == 'waiting_verification') {
-        return status == 'waiting_payment';
+        if (paymentStatus == 'waiting_verification') return true;
+        if (paymentStatus == 'rejected' || paymentStatus == 'verified') {
+          return false;
+        }
+        return status == 'service_completed' || status == 'waiting_payment';
       }
       if (_selectedFilter == 'verified') {
+        if (paymentStatus == 'verified') return true;
+        if (paymentStatus == 'rejected') return false;
         return status == 'paid' || status == 'completed';
       }
       if (_selectedFilter == 'rejected') {
+        if (paymentStatus == 'rejected') return true;
         return status == 'cancelled';
       }
       // 'all'
-      return status == 'waiting_payment' ||
+      return status == 'service_completed' ||
+          status == 'waiting_payment' ||
           status == 'paid' ||
           status == 'completed' ||
-          status == 'cancelled';
+          status == 'cancelled' ||
+          paymentStatus != null;
     }).toList();
 
     if (filtered.isEmpty) {
@@ -496,7 +603,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
               icon: Icons.receipt_long_outlined,
               title: 'Tidak Ada Data',
               message: _selectedFilter == 'waiting_verification'
-                  ? 'Tidak ada booking menunggu verifikasi pembayaran.'
+                  ? 'Tidak ada booking menunggu pembayaran atau verifikasi.'
                   : 'Tidak ada data pembayaran dengan status ini.',
             ),
           ],
@@ -514,13 +621,21 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
         itemBuilder: (context, index) {
           final booking = filtered[index];
           final matchedOrder = _findOrderForBooking(orders, booking.id);
+          final matchedPayment = matchedOrder != null
+              ? paymentProvider.getPaymentForOrder(matchedOrder.id)
+              : null;
 
           return _AdminPaymentBookingCard(
             booking: booking,
             order: matchedOrder,
+            payment: matchedPayment,
             isLoading: paymentProvider.isLoading,
             onVerifyWithId: () {
-              _showVerifyPaymentDialog(booking, matchedOrder);
+              _showVerifyPaymentDialog(
+                booking,
+                matchedOrder,
+                payment: matchedPayment,
+              );
             },
           );
         },
@@ -555,19 +670,58 @@ class _AdminPaymentBookingCard extends StatelessWidget {
   const _AdminPaymentBookingCard({
     required this.booking,
     required this.order,
+    this.payment,
     required this.isLoading,
     required this.onVerifyWithId,
   });
 
   final Booking booking;
   final ServiceOrder? order;
+  final Payment? payment;
   final bool isLoading;
   final VoidCallback onVerifyWithId;
 
   @override
   Widget build(BuildContext context) {
-    final status = booking.status?.toLowerCase() ?? '-';
-    final isWaitingPayment = status == 'waiting_payment';
+    final bookingStatus = booking.status?.toLowerCase() ?? '-';
+    final paymentStatus = payment?.status?.toLowerCase();
+
+    // Utamakan data pembayaran resmi jika tersedia
+    final bool isPaymentVerified = paymentStatus == 'verified' ||
+        (paymentStatus == null &&
+            (bookingStatus == 'paid' || bookingStatus == 'completed'));
+    final bool isPaymentRejected = paymentStatus == 'rejected';
+    final bool isWaitingAdminVerification =
+        paymentStatus == 'waiting_verification' ||
+        (paymentStatus == null && bookingStatus == 'waiting_payment');
+    final bool isWaitingCustomerPayment =
+        paymentStatus == null && bookingStatus == 'service_completed';
+    final bool isBookingCancelled =
+        paymentStatus == null && bookingStatus == 'cancelled';
+
+    String statusBadgeLabel;
+    String badgeStatus;
+
+    if (isPaymentRejected) {
+      statusBadgeLabel = 'Pembayaran Ditolak';
+      badgeStatus = 'rejected';
+    } else if (isPaymentVerified) {
+      statusBadgeLabel =
+          paymentStatus == 'verified' ? 'Terverifikasi' : 'Dibayar';
+      badgeStatus = 'verified';
+    } else if (isWaitingAdminVerification) {
+      statusBadgeLabel = 'Menunggu Verifikasi Admin';
+      badgeStatus = 'waiting_payment';
+    } else if (isWaitingCustomerPayment) {
+      statusBadgeLabel = 'Menunggu Pembayaran Customer';
+      badgeStatus = 'service_completed';
+    } else if (isBookingCancelled) {
+      statusBadgeLabel = 'Booking Dibatalkan';
+      badgeStatus = 'cancelled';
+    } else {
+      statusBadgeLabel = StatusBadge.formatStatusLabel(bookingStatus);
+      badgeStatus = bookingStatus;
+    }
 
     return PremiumCard(
       padding: const EdgeInsets.all(16),
@@ -612,7 +766,10 @@ class _AdminPaymentBookingCard extends StatelessWidget {
                   ],
                 ),
               ),
-              StatusBadge(status: status),
+              StatusBadge(
+                status: badgeStatus,
+                customLabel: statusBadgeLabel,
+              ),
             ],
           ),
           const SizedBox(height: 14),
@@ -640,7 +797,7 @@ class _AdminPaymentBookingCard extends StatelessWidget {
           Row(
             children: [
               const Spacer(),
-              if (isWaitingPayment)
+              if (isWaitingAdminVerification)
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -653,7 +810,20 @@ class _AdminPaymentBookingCard extends StatelessWidget {
                   icon: const Icon(Icons.verified_outlined, size: 18),
                   label: const Text('Verifikasi Pembayaran'),
                 )
-              else if (status == 'paid')
+              else if (isWaitingCustomerPayment)
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.secondary,
+                    side: const BorderSide(color: AppColors.secondary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: isLoading ? null : onVerifyWithId,
+                  icon: const Icon(Icons.numbers_outlined, size: 18),
+                  label: const Text('Input Verifikasi Manual'),
+                )
+              else if (isPaymentVerified)
                 const Row(
                   children: [
                     Icon(
@@ -672,7 +842,28 @@ class _AdminPaymentBookingCard extends StatelessWidget {
                     ),
                   ],
                 )
-              else if (status == 'cancelled')
+              else if (isPaymentRejected)
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.cancel_outlined,
+                      color: AppColors.error,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      payment?.notes != null && payment!.notes!.isNotEmpty
+                          ? 'Pembayaran Ditolak (${payment!.notes})'
+                          : 'Pembayaran Ditolak',
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                )
+              else if (isBookingCancelled)
                 const Row(
                   children: [
                     Icon(Icons.cancel, color: AppColors.error, size: 18),
@@ -743,8 +934,13 @@ class _InfoRow extends StatelessWidget {
 class _PaymentVerifyOrRejectDialog extends StatefulWidget {
   final Booking booking;
   final ServiceOrder? order;
+  final Payment? payment;
 
-  const _PaymentVerifyOrRejectDialog({required this.booking, this.order});
+  const _PaymentVerifyOrRejectDialog({
+    required this.booking,
+    this.order,
+    this.payment,
+  });
 
   @override
   State<_PaymentVerifyOrRejectDialog> createState() =>
@@ -758,7 +954,9 @@ class _PaymentVerifyOrRejectDialogState
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController();
+    _controller = TextEditingController(
+      text: widget.payment?.id != null ? widget.payment!.id.toString() : '',
+    );
   }
 
   @override
@@ -800,7 +998,7 @@ class _PaymentVerifyOrRejectDialogState
             ],
             const SizedBox(height: 12),
             const Text(
-              'Sesuai kontrak API, masukkan ID Pembayaran (Payment ID) resmi transaksi ini:',
+              'Masukkan ID Pembayaran (Payment ID) resmi yang berstatus "waiting_verification" untuk diverifikasi atau ditolak:',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 12),
@@ -811,8 +1009,8 @@ class _PaymentVerifyOrRejectDialogState
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'ID Pembayaran (Payment ID)',
-                hintText: 'Contoh: 1',
-                hintStyle: TextStyle(color: AppColors.textMuted),
+                hintText: 'Contoh: 9, 10, 11 (status: waiting_verification)',
+                hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 12),
                 prefixIcon: Icon(Icons.numbers, color: AppColors.secondary),
               ),
             ),

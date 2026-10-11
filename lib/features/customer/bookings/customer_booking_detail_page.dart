@@ -12,6 +12,7 @@ import '../../../models/booking.dart';
 import '../../../models/service_order.dart';
 import '../../../providers/booking_provider.dart';
 import '../../../providers/service_order_provider.dart';
+import '../payments/customer_payment_page.dart';
 import '../service_orders/customer_service_order_detail_page.dart';
 
 class CustomerBookingDetailPage extends StatefulWidget {
@@ -53,6 +54,278 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
     }
 
     return null;
+  }
+
+  Future<void> _cancelBooking(Booking booking) async {
+    final reasonController = TextEditingController();
+
+    final shouldCancel = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: AppColors.surfaceCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          title: const Text(
+            'Batalkan Booking',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Apakah Anda yakin ingin membatalkan booking #${booking.nomorBooking ?? booking.id}?',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                'Alasan Pembatalan (Opsional):',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: reasonController,
+                maxLines: 2,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Tuliskan alasan jika ada...',
+                  hintStyle: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text(
+                'Kembali',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('Batalkan Booking'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldCancel != true || !mounted) {
+      reasonController.dispose();
+      return;
+    }
+
+    final reason = reasonController.text.trim();
+    reasonController.dispose();
+
+    final provider = context.read<BookingProvider>();
+    final success = await provider.cancelBooking(
+      booking.id,
+      reason: reason.isNotEmpty ? reason : null,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Booking berhasil dibatalkan.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      _reload();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            provider.errorMessage ?? 'Gagal membatalkan booking.',
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Widget _buildPickupLifecycleBanner(String status) {
+    if (status == 'waiting_pickup') {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.warningContainer.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.warning.withValues(alpha: 0.5),
+          ),
+        ),
+        child: const Row(
+          children: [
+            Icon(
+              Icons.access_time_outlined,
+              color: AppColors.warning,
+              size: 22,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Menunggu Penjemputan',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Kurir bengkel akan segera mengambil motor di lokasi penjemputan Anda.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (status == 'vehicle_picked_up') {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.secondaryContainer.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.secondary.withValues(alpha: 0.5),
+          ),
+        ),
+        child: const Row(
+          children: [
+            Icon(
+              Icons.two_wheeler_outlined,
+              color: AppColors.secondary,
+              size: 22,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Motor Dalam Perjalanan ke Bengkel',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Kendaraan telah dijemput Kurir dan diserahterimakan ke bengkel MB-engkelQQ. '
+                    'Pengerjaan servis belum dimulai. Menunggu sistem bengkel menugaskan mekanik dan membuat order servis.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (status == 'waiting_service') {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.infoContainer.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.info.withValues(alpha: 0.5),
+          ),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.garage_outlined, color: AppColors.info, size: 22),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Motor Telah Tiba di Bengkel',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Kendaraan telah sampai di bengkel dan masuk antrean servis mekanik.',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   @override
@@ -114,6 +387,10 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
                 ServiceStatusTimeline(
                   currentStatus: booking.status ?? 'pending',
                 ),
+                if (booking.pickupRequested == true) ...[
+                  const SizedBox(height: 16),
+                  _buildPickupLifecycleBanner(booking.status ?? ''),
+                ],
                 const SizedBox(height: 20),
                 const SectionHeader(
                   title: 'Informasi Jadwal',
@@ -318,7 +595,35 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
                 ],
                 if (serviceOrder != null) ...[
                   const SizedBox(height: 20),
-                  _buildServiceOrderCard(serviceOrder),
+                  _buildServiceOrderCard(booking, serviceOrder),
+                ],
+                if (booking.status == 'pending' ||
+                    booking.status == 'confirmed') ...[
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.error,
+                        side: const BorderSide(color: AppColors.error),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: bookingProvider.isLoading
+                          ? null
+                          : () => _cancelBooking(booking),
+                      icon: const Icon(Icons.cancel_outlined, size: 20),
+                      label: const Text(
+                        'Batalkan Booking',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 32),
               ],
@@ -329,7 +634,10 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
     );
   }
 
-  Widget _buildServiceOrderCard(ServiceOrder serviceOrder) {
+  Widget _buildServiceOrderCard(Booking booking, ServiceOrder serviceOrder) {
+    final isServiceCompleted = booking.status == 'service_completed';
+    final isWaitingPayment = booking.status == 'waiting_payment';
+
     return PremiumCard(
       padding: const EdgeInsets.all(16),
       borderColor: AppColors.secondary.withValues(alpha: 0.4),
@@ -378,16 +686,41 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
               StatusBadge(status: serviceOrder.status ?? 'unknown'),
             ],
           ),
+          if (serviceOrder.mechanicId != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.engineering_outlined,
+                  size: 16,
+                  color: AppColors.secondary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Mekanik Ditugaskan: Mekanik #${serviceOrder.mechanicId}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ],
           if (serviceOrder.grandTotal != null) ...[
             const SizedBox(height: 12),
             const Divider(color: AppColors.borderSubtle),
             const SizedBox(height: 8),
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Estimasi Biaya:',
-                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                    isServiceCompleted ? 'Total Tagihan Resmi:' : 'Estimasi Biaya:',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isServiceCompleted ? AppColors.textPrimary : AppColors.textMuted,
+                      fontWeight: isServiceCompleted ? FontWeight.bold : FontWeight.normal,
+                    ),
                   ),
                 ),
                 Expanded(
@@ -402,6 +735,97 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (isServiceCompleted) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.receipt_long, color: AppColors.primary, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Tagihan Siap Dibayar',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Servis telah selesai dikerjakan mekanik. Silakan selesaikan pembayaran.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 10),
+                  PrimaryButton(
+                    text: serviceOrder.grandTotal != null
+                        ? 'Bayar Tagihan (${_formatCurrency(serviceOrder.grandTotal!)})'
+                        : 'Bayar Tagihan Sekarang',
+                    icon: Icons.payment_rounded,
+                    height: 42,
+                    onPressed: () async {
+                      final result = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => CustomerPaymentPage(
+                            serviceOrder: serviceOrder,
+                          ),
+                        ),
+                      );
+                      if (result == true && mounted) {
+                        _reload();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ] else if (isWaitingPayment) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warningContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.access_time_rounded, color: AppColors.warning, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pembayaran Menunggu Verifikasi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Bukti pembayaran telah dikirim dan menunggu verifikasi admin. Pengajuan pembayaran baru dikunci untuk mencegah duplikasi.',
+                          style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
           const SizedBox(height: 14),

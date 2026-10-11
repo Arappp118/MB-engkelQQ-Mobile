@@ -5,8 +5,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/app_states.dart';
 import '../../core/widgets/premium_card.dart';
 import '../../models/notification.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../services/payment_service.dart';
+import '../admin/payments/admin_payments_page.dart';
 import '../customer/bookings/customer_booking_detail_page.dart';
+import '../customer/invoices/customer_invoice_detail_page.dart';
+import '../customer/invoices/customer_invoices_page.dart';
 import '../customer/service_orders/customer_service_order_detail_page.dart';
 
 class NotificationCenterPage extends StatefulWidget {
@@ -36,11 +41,59 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
   void _onNotificationTap(AppNotification item) async {
     final provider = context.read<NotificationProvider>();
 
+    // 1. Penyimpanan status notifikasi: tandai dibaca di server & lokal
     if (!item.isReadStatus) {
       await provider.markAsRead(item.id);
     }
 
     if (!mounted) return;
+
+    // 2. Pengiriman navigasi: arahkan ke layar tujuan sesuai entitas dan role
+    final isPayment = item.type == 'payment' || item.entityType == 'Payment';
+
+    if (isPayment) {
+      String? role;
+      try {
+        role = context.read<AuthProvider>().role?.toLowerCase();
+      } catch (_) {}
+
+      if (role == 'admin') {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => const AdminPaymentsPage(),
+          ),
+        );
+        return;
+      }
+
+      // Navigasi untuk role Customer
+      if (item.entityType == 'Payment' && item.entityId != null) {
+        int? orderId;
+        try {
+          final payment = await PaymentService().getPayment(item.entityId!);
+          orderId = payment.serviceOrderId;
+        } catch (_) {}
+
+        if (!mounted) return;
+
+        if (orderId != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  CustomerInvoiceDetailPage(serviceOrderId: orderId!),
+            ),
+          );
+          return;
+        }
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const CustomerInvoicesPage(),
+        ),
+      );
+      return;
+    }
 
     if (item.entityType == 'ServiceOrder' && item.entityId != null) {
       Navigator.of(context).push(

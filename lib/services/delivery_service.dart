@@ -75,9 +75,13 @@ class DeliveryService {
     return DeliveryTask.fromJson(Map<String, dynamic>.from(data));
   }
 
-  Future<DeliveryTask> completeDeliveryTask(int id) async {
+  Future<DeliveryTask> completeDeliveryTask(int id, {String? notes}) async {
+    final body = (notes != null && notes.trim().isNotEmpty)
+        ? {'notes': notes.trim()}
+        : null;
     final response = await _apiClient.post(
       '${ApiConstants.deliveryTasks}/$id/complete',
+      body: body,
     );
 
     final data = response['data'];

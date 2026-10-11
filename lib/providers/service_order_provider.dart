@@ -24,6 +24,7 @@ class ServiceOrderProvider extends ChangeNotifier {
   bool _isLoadingItems = false;
   String? _errorMessage;
   String? _errorMessageItems;
+  int? _errorStatusCode;
 
   List<ServiceOrder> get serviceOrders => List.unmodifiable(_serviceOrders);
 
@@ -36,6 +37,7 @@ class ServiceOrderProvider extends ChangeNotifier {
 
   String? get errorMessage => _errorMessage;
   String? get errorMessageItems => _errorMessageItems;
+  int? get errorStatusCode => _errorStatusCode;
 
   Future<bool> loadServiceOrders() async {
     _setLoading(true);
@@ -158,6 +160,38 @@ class ServiceOrderProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> addServiceOrderItem({
+    required int orderId,
+    required int serviceItemId,
+    required int quantity,
+  }) async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      final updatedOrder = await _serviceOrderService.addItemToServiceOrder(
+        serviceOrderId: orderId,
+        serviceItemId: serviceItemId,
+        quantity: quantity,
+      );
+
+      _updateServiceOrder(updatedOrder);
+      _selectedServiceOrder = updatedOrder;
+
+      return true;
+    } catch (error) {
+      if (error is ApiException) {
+        _errorStatusCode = error.statusCode;
+      } else {
+        _errorStatusCode = null;
+      }
+      _errorMessage = _extractErrorMessage(error);
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   void selectServiceOrder(ServiceOrder? serviceOrder) {
     _selectedServiceOrder = serviceOrder;
     notifyListeners();
@@ -165,6 +199,7 @@ class ServiceOrderProvider extends ChangeNotifier {
 
   void clearError() {
     _errorMessage = null;
+    _errorStatusCode = null;
     notifyListeners();
   }
 
@@ -174,6 +209,7 @@ class ServiceOrderProvider extends ChangeNotifier {
     _serviceItems = [];
     _errorMessage = null;
     _errorMessageItems = null;
+    _errorStatusCode = null;
     notifyListeners();
   }
 

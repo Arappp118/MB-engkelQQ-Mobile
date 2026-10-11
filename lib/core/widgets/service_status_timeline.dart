@@ -14,6 +14,10 @@ class ServiceStatusTimeline extends StatelessWidget {
 
   int _getCurrentStepIndex() {
     final s = currentStatus.toLowerCase();
+    // service_completed dan waiting_payment adalah tahap pengerjaan rampung, menuju pembayaran (Tahap 3)
+    if (s == 'service_completed' || s.contains('waiting_payment')) {
+      return 2;
+    }
     if (s.contains('complete') ||
         s.contains('selesai') ||
         s.contains('paid') ||
@@ -23,12 +27,16 @@ class ServiceStatusTimeline extends StatelessWidget {
     if (s.contains('progress') ||
         s.contains('pengerjaan') ||
         s.contains('working') ||
-        s.contains('diagnosed')) {
+        s.contains('diagnosed') ||
+        s.contains('in_service')) {
       return 2;
     }
     if (s.contains('confirm') ||
         s.contains('assigned') ||
-        s.contains('dikonfirmasi')) {
+        s.contains('dikonfirmasi') ||
+        s.contains('waiting_pickup') ||
+        s.contains('vehicle_picked_up') ||
+        s.contains('waiting_service')) {
       return 1;
     }
     return 0; // pending
@@ -176,6 +184,75 @@ class ServiceStatusTimeline extends StatelessWidget {
               );
             }),
           ),
+          if (currentStatus.toLowerCase() == 'vehicle_picked_up') ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.secondaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.two_wheeler_outlined, size: 16, color: AppColors.secondary),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Motor telah dijemput kurir & diserahkan ke bengkel. Pengerjaan servis belum dimulai (menunggu penugasan mekanik dari sistem bengkel).',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (currentStatus.toLowerCase() == 'waiting_service') ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.infoContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.info.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.garage_outlined, size: 16, color: AppColors.info),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Kendaraan telah tiba di bengkel dan masuk antrean servis sambil menunggu mekanik tersedia.',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          if (currentStatus.toLowerCase() == 'service_completed') ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primaryContainer.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 16, color: AppColors.primary),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Pengerjaan servis telah selesai. Silakan lakukan pembayaran tagihan untuk menyelesaikan pesanan.',
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

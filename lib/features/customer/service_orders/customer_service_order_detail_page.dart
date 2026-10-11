@@ -8,7 +8,11 @@ import '../../../core/widgets/premium_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../core/widgets/service_status_timeline.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../../models/booking.dart';
+import '../../../models/invoice.dart';
 import '../../../models/service_order.dart';
+import '../../../providers/booking_provider.dart';
+import '../../../providers/invoice_provider.dart';
 import '../../../providers/service_order_provider.dart';
 import '../invoices/customer_invoice_detail_page.dart';
 import '../payments/customer_payment_page.dart';
@@ -33,16 +37,30 @@ class _CustomerServiceOrderDetailPageState
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceOrderProvider>().loadServiceOrder(
-        widget.serviceOrderId,
-      );
+      _refresh();
     });
   }
 
   Future<void> _refresh() async {
-    await context.read<ServiceOrderProvider>().loadServiceOrder(
-      widget.serviceOrderId,
-    );
+    final serviceOrderProvider = context.read<ServiceOrderProvider>();
+    final invoiceProvider = context.read<InvoiceProvider>();
+    final bookingProvider = context.read<BookingProvider>();
+
+    await Future.wait([
+      serviceOrderProvider.loadServiceOrder(
+        widget.serviceOrderId,
+      ),
+      invoiceProvider.loadInvoice(
+        widget.serviceOrderId,
+      ),
+    ]);
+
+    if (!mounted) return;
+
+    final order = serviceOrderProvider.selectedServiceOrder;
+    if (order?.bookingId != null) {
+      await bookingProvider.loadBooking(order!.bookingId!);
+    }
   }
 
   @override
@@ -52,26 +70,39 @@ class _CustomerServiceOrderDetailPageState
       appBar: AppBar(
         title: const Text('Detail Servis'),
         backgroundColor: AppColors.surface,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Muat Ulang',
+            onPressed: _refresh,
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(color: AppColors.border, height: 1),
         ),
       ),
-      body: Consumer<ServiceOrderProvider>(
-        builder: (context, provider, _) {
-          final order = provider.selectedServiceOrder;
+      body: Consumer3<ServiceOrderProvider, InvoiceProvider, BookingProvider>(
+        builder: (context, serviceProvider, invoiceProvider, bookingProvider, _) {
+          final order = serviceProvider.selectedServiceOrder;
+          final invoice = invoiceProvider.selectedInvoice?.serviceOrderId == widget.serviceOrderId
+              ? invoiceProvider.selectedInvoice
+              : null;
+          final booking = bookingProvider.selectedBooking?.id == order?.bookingId
+              ? bookingProvider.selectedBooking
+              : (bookingProvider.bookings.where((b) => b.id == order?.bookingId).firstOrNull);
 
-          if (provider.isLoading && order == null) {
+          if (serviceProvider.isLoading && order == null) {
             return const LoadingState(
               height: 350,
               message: 'Memuat data order servis...',
             );
           }
 
-          if (provider.errorMessage != null && order == null) {
+          if (serviceProvider.errorMessage != null && order == null) {
             return ErrorState(
               title: 'Gagal Memuat Servis',
-              message: provider.errorMessage!,
+              message: serviceProvider.errorMessage!,
               onRetry: _refresh,
             );
           }
@@ -115,7 +146,12 @@ class _CustomerServiceOrderDetailPageState
                 ),
                 _SummaryCard(order: order),
                 const SizedBox(height: 20),
-                _PaymentSection(order: order),
+                _PaymentSection(
+                  order: order,
+                  invoice: invoice,
+                  booking: booking,
+                  onPaymentCompleted: _refresh,
+                ),
                 if (order.status?.toLowerCase() == 'completed' ||
                     order.status?.toLowerCase() == 'paid') ...[
                   const SizedBox(height: 16),
@@ -184,6 +220,17 @@ class _ServiceHeader extends StatelessWidget {
                     letterSpacing: -0.3,
                   ),
                 ),
+                if (order.mechanicId != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Mekanik Ditugaskan: #${order.mechanicId}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.secondary,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -370,72 +417,67 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _PaymentSection extends StatelessWidget {
-  const _PaymentSection({required this.order});
+  const _PaymentSection({
+    required this.order,
+    this.invoice,
+    this.booking,
+    this.onPaymentCompleted,
+  });
 
   final ServiceOrder order;
+  final Invoice? invoice;
+  final Booking? booking;
+  final VoidCallback? onPaymentCompleted;
+
+  static String _formatPaymentMethod(String method) {
+    switch (method.toLowerCase().trim()) {
+      case 'cash':
+        return 'Tunai (Cash)';
+      case 'transfer':
+        return 'Transfer Bank';
+      case 'qris':
+        return 'QRIS';
+      default:
+        return method;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final status = order.status?.toLowerCase();
+    final orderStatus = order.status?.toLowerCase().trim();
+    final invoicePaymentStatus = invoice?.paymentStatus?.toLowerCase().trim();
+    final bookingStatus = booking?.status?.toLowerCase().trim();
 
-    if (status == 'paid') {
-      return PremiumCard(
-        padding: const EdgeInsets.all(16),
-        borderColor: AppColors.success.withValues(alpha: 0.3),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.success,
-                  size: 22,
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pembayaran Telah Lunas',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        'Transaksi telah diverifikasi dan invoice resmi tersedia.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            SecondaryButton(
-              text: 'Buka Invoice Resmi',
-              icon: Icons.receipt_long,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        CustomerInvoiceDetailPage(serviceOrderId: order.id),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    }
+    // Sesuai audit kontrak Laravel (PaymentService::verify & InvoiceResource):
+    // 1. payment.status bernilai 'verified' dan diteruskan oleh InvoiceResource sebagai payment_status.
+    // 2. booking.status diperbarui menjadi 'paid' lalu 'completed' oleh backend Laravel.
+    // 3. service_order.status TETAP 'completed' (enum DB Laravel: pending, in_progress, completed, cancelled).
+    final isVerified = invoicePaymentStatus == 'verified' ||
+        invoicePaymentStatus == 'paid' ||
+        bookingStatus == 'paid' ||
+        (bookingStatus == 'completed' &&
+            invoicePaymentStatus != 'waiting_verification' &&
+            invoicePaymentStatus != 'rejected' &&
+            invoicePaymentStatus != null);
 
-    if (status != 'completed' && status != 'waiting_payment') {
+    // Saat Customer mengajukan pembayaran (PaymentService::create):
+    // - payment.status menjadi 'waiting_verification'
+    // - booking.status menjadi 'waiting_payment'
+    final isWaitingVerification = !isVerified &&
+        (invoicePaymentStatus == 'waiting_verification' ||
+            (bookingStatus == 'waiting_payment' &&
+                invoicePaymentStatus != 'rejected' &&
+                invoicePaymentStatus != null));
+
+    final isRejected = !isVerified &&
+        !isWaitingVerification &&
+        (invoicePaymentStatus == 'rejected');
+
+    // Jika pekerjaan belum selesai dikerjakan mekanik
+    if (orderStatus != 'completed' &&
+        orderStatus != 'waiting_payment' &&
+        !isVerified &&
+        !isWaitingVerification) {
       return PremiumCard(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -479,6 +521,400 @@ class _PaymentSection extends StatelessWidget {
       );
     }
 
+    // KONDISI 1: Pembayaran sudah diverifikasi Admin
+    if (isVerified) {
+      final method = invoice?.paymentMethod != null
+          ? _formatPaymentMethod(invoice!.paymentMethod!)
+          : null;
+      final total = order.grandTotal ?? invoice?.grandTotal;
+
+      return PremiumCard(
+        padding: const EdgeInsets.all(18),
+        borderColor: AppColors.success.withValues(alpha: 0.35),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.success,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pembayaran Telah Lunas',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Transaksi telah diverifikasi oleh Admin MB-engkelQQ dan faktur resmi telah diterbitkan.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                StatusBadge(status: invoicePaymentStatus ?? 'verified'),
+              ],
+            ),
+            const Divider(color: AppColors.borderSubtle, height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Status Pembayaran:',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                Text(
+                  invoicePaymentStatus == 'paid' ? 'Dibayar' : 'Terverifikasi',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.success,
+                  ),
+                ),
+              ],
+            ),
+            if (method != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Metode Pembayaran:',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  Text(
+                    method,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (total != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total Pembayaran:',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  Text(
+                    _formatCurrency(total),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 16),
+            SecondaryButton(
+              text: 'Buka Invoice Resmi',
+              icon: Icons.receipt_long,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        CustomerInvoiceDetailPage(serviceOrderId: order.id),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // KONDISI 2: Menunggu verifikasi Admin
+    if (isWaitingVerification) {
+      final method = invoice?.paymentMethod != null
+          ? _formatPaymentMethod(invoice!.paymentMethod!)
+          : null;
+      final total = order.grandTotal ?? invoice?.grandTotal;
+
+      return PremiumCard(
+        padding: const EdgeInsets.all(18),
+        borderColor: AppColors.warning.withValues(alpha: 0.35),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.access_time_rounded,
+                    color: AppColors.warning,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Menunggu Verifikasi Admin',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Bukti pembayaran telah berhasil dikirim. Admin MB-engkelQQ sedang memverifikasi transaksi Anda.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const StatusBadge(status: 'waiting_verification'),
+              ],
+            ),
+            const Divider(color: AppColors.borderSubtle, height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Status Pembayaran:',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const Text(
+                  'Menunggu Verifikasi',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.warning,
+                  ),
+                ),
+              ],
+            ),
+            if (method != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Metode Pembayaran:',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  Text(
+                    method,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (total != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total Tagihan:',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  Text(
+                    _formatCurrency(total),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceCardElevated,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: AppColors.textMuted),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Admin akan meninjau pembayaran Anda segera. Anda tidak perlu mengirim pembayaran ulang.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SecondaryButton(
+              text: 'Buka Rincian Invoice',
+              icon: Icons.receipt_long_outlined,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        CustomerInvoiceDetailPage(serviceOrderId: order.id),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // KONDISI 3: Pembayaran ditolak oleh Admin
+    if (isRejected) {
+      final total = order.grandTotal ?? invoice?.grandTotal;
+
+      return PremiumCard(
+        padding: const EdgeInsets.all(18),
+        borderColor: AppColors.error.withValues(alpha: 0.35),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.cancel_outlined,
+                    color: AppColors.error,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pembayaran Ditolak',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Bukti pembayaran sebelumnya ditolak oleh admin. Silakan periksa kembali dan ajukan pembayaran ulang.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const StatusBadge(status: 'rejected'),
+              ],
+            ),
+            const Divider(color: AppColors.borderSubtle, height: 24),
+            if (total != null) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Total Tagihan:',
+                    style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  ),
+                  Text(
+                    _formatCurrency(total),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+            PrimaryButton(
+              text: 'Bayar Ulang / Kirim Bukti Baru',
+              icon: Icons.payment_rounded,
+              height: 48,
+              onPressed: () async {
+                final result = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => CustomerPaymentPage(serviceOrder: order),
+                  ),
+                );
+
+                if (result == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Pembayaran berhasil dikirim untuk verifikasi admin.',
+                      ),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                  onPaymentCompleted?.call();
+                }
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    // KONDISI 4: Menunggu Pembayaran (Servis selesai, belum ada pembayaran dikirim)
+    final total = order.grandTotal ?? invoice?.grandTotal;
+
     return PremiumCard(
       padding: const EdgeInsets.all(18),
       borderColor: AppColors.primary.withValues(alpha: 0.5),
@@ -499,7 +935,7 @@ class _PaymentSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              StatusBadge(status: 'Menunggu Pembayaran'),
+              const StatusBadge(status: 'waiting_payment'),
             ],
           ),
           const SizedBox(height: 10),
@@ -511,7 +947,7 @@ class _PaymentSection extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               ),
               Text(
-                _formatCurrency(order.grandTotal),
+                _formatCurrency(total),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
@@ -541,6 +977,7 @@ class _PaymentSection extends StatelessWidget {
                     backgroundColor: AppColors.success,
                   ),
                 );
+                onPaymentCompleted?.call();
               }
             },
           ),

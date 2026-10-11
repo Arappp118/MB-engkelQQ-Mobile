@@ -94,9 +94,13 @@ class BookingService {
     return Booking.fromJson(Map<String, dynamic>.from(data));
   }
 
-  Future<Booking> cancelBooking(int id) async {
+  Future<Booking> cancelBooking(int id, {String? reason}) async {
+    final body = (reason != null && reason.trim().isNotEmpty)
+        ? {'cancellation_reason': reason.trim()}
+        : null;
     final response = await _apiClient.post(
       '${ApiConstants.bookings}/$id/cancel',
+      body: body,
     );
 
     final data = response['data'];

@@ -1,3 +1,5 @@
+import 'vehicle.dart';
+
 class Booking {
   const Booking({
     required this.id,
@@ -15,6 +17,7 @@ class Booking {
     this.status,
     this.catatan,
     this.cancellationReason,
+    this.vehicle,
   });
 
   final int id;
@@ -32,6 +35,7 @@ class Booking {
   final String? status;
   final String? catatan;
   final String? cancellationReason;
+  final Vehicle? vehicle;
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
@@ -50,6 +54,9 @@ class Booking {
       status: json['status']?.toString(),
       catatan: json['catatan']?.toString(),
       cancellationReason: json['cancellation_reason']?.toString(),
+      vehicle: json['vehicle'] is Map
+          ? Vehicle.fromJson(Map<String, dynamic>.from(json['vehicle']))
+          : null,
     );
   }
 
@@ -70,6 +77,7 @@ class Booking {
       'status': status,
       'catatan': catatan,
       'cancellation_reason': cancellationReason,
+      if (vehicle != null) 'vehicle': vehicle!.toJson(),
     };
   }
 

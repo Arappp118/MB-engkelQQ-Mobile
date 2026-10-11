@@ -68,6 +68,23 @@ class ApiConfig extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
   bool get isDefault => _baseUrl == defaultBaseUrl;
 
+  /// Returns the base URL for web views/browser (strips /api/v1)
+  String get webBaseUrl {
+    try {
+      final uri = Uri.parse(_baseUrl);
+      var path = uri.path;
+      if (path.endsWith('/api/v1')) {
+        path = path.substring(0, path.length - '/api/v1'.length);
+      } else if (path.endsWith('/api/v1/')) {
+        path = path.substring(0, path.length - '/api/v1/'.length);
+      }
+      final stripped = uri.replace(path: path.isEmpty ? '/' : path).toString();
+      return stripped.replaceAll(RegExp(r'/+$'), '');
+    } catch (_) {
+      return _baseUrl.replaceAll(RegExp(r'/api/v1/?$'), '');
+    }
+  }
+
   Future<void> initialize() async {
     if (_isInitialized) return;
     try {
@@ -100,15 +117,40 @@ class ApiConfig extends ChangeNotifier {
     notifyListeners();
   }
 
+  static bool _isLocalDevHost(String host) {
+    if (host == 'localhost' || host == '127.0.0.1' || host == '10.0.2.2') {
+      return true;
+    }
+    final parts = host.split('.');
+    if (parts.length == 4 && parts.every((p) => int.tryParse(p) != null)) {
+      final first = int.parse(parts[0]);
+      final second = int.parse(parts[1]);
+      if (first == 192 && second == 168) return true;
+      if (first == 10) return true;
+      if (first == 172 && second >= 16 && second <= 31) return true;
+      if (first == 127) return true;
+    }
+    return false;
+  }
+
   /// Normalizes a given URL input:
   /// - Trims whitespace
+  /// - Auto-prepends `http://` if scheme is omitted for IP/hostname
   /// - Validates scheme is HTTP or HTTPS
+  /// - Auto-assigns port 8000 if user omits port on local LAN development IP (e.g. 192.168.x.x)
   /// - Strips trailing slashes
   /// - Guarantees `/api/v1` path without duplication
   static String normalizeUrl(String rawUrl) {
-    final trimmed = rawUrl.trim();
+    var trimmed = rawUrl.trim();
     if (trimmed.isEmpty) {
       throw const FormatException('URL API tidak boleh kosong.');
+    }
+
+    // Auto-prepend http:// if scheme is missing but user entered host/IP
+    if (!trimmed.contains('://')) {
+      if (trimmed.contains('.') || trimmed.startsWith('localhost')) {
+        trimmed = 'http://$trimmed';
+      }
     }
 
     final uri = Uri.tryParse(trimmed);
@@ -123,8 +165,19 @@ class ApiConfig extends ChangeNotifier {
       throw const FormatException('Skema URL harus HTTP atau HTTPS.');
     }
 
-    // Build origin: scheme + host + port
-    final portPart = uri.hasPort ? ':${uri.port}' : '';
+    // Determine port:
+    // If explicit port is provided, preserve it.
+    // If NO port is provided on a local/LAN development IP or localhost under HTTP,
+    // default to :8000 (standard Laravel artisan serve port) to prevent accidental port 80 connection failure.
+    String portPart;
+    if (uri.hasPort) {
+      portPart = ':${uri.port}';
+    } else if (scheme == 'http' && _isLocalDevHost(uri.host)) {
+      portPart = ':8000';
+    } else {
+      portPart = '';
+    }
+
     final origin = '$scheme://${uri.host}$portPart';
 
     // Normalize path

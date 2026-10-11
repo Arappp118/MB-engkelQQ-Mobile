@@ -102,12 +102,12 @@ class DeliveryProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> completeDeliveryTask(int id) async {
+  Future<bool> completeDeliveryTask(int id, {String? notes}) async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
-      final deliveryTask = await _deliveryService.completeDeliveryTask(id);
+      final deliveryTask = await _deliveryService.completeDeliveryTask(id, notes: notes);
 
       _updateDeliveryTask(deliveryTask);
 

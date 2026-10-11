@@ -93,4 +93,32 @@ class ServiceOrderService {
 
     return ServiceOrder.fromJson(Map<String, dynamic>.from(data));
   }
+
+  /// Tambah item / tindakan / sparepart ke service order.
+  ///
+  /// Mengirimkan service_item_id dan quantity sesuai aturan bisnis backend
+  /// (harga selalu ditentukan oleh database/server).
+  Future<ServiceOrder> addItemToServiceOrder({
+    required int serviceOrderId,
+    required int serviceItemId,
+    required int quantity,
+  }) async {
+    final response = await _apiClient.post(
+      '${ApiConstants.serviceOrders}/$serviceOrderId/items',
+      body: {
+        'service_item_id': serviceItemId,
+        'quantity': quantity,
+      },
+    );
+
+    final data = response['data'];
+
+    if (data is! Map) {
+      throw const FormatException(
+        'Response tambah item service tidak memiliki format data yang valid.',
+      );
+    }
+
+    return ServiceOrder.fromJson(Map<String, dynamic>.from(data));
+  }
 }

@@ -184,7 +184,20 @@ class _CourierDashboardPageState extends State<CourierDashboardPage> {
             ? const LoadingState(message: 'Memuat tugas kurir...')
             : Consumer<DeliveryProvider>(
                 builder: (context, provider, child) {
-                  final tasks = provider.deliveryTasks;
+                  final currentUser = () {
+                    try {
+                      return context.read<AuthProvider>().user;
+                    } catch (_) {
+                      return null;
+                    }
+                  }();
+                  final currentUserId = currentUser?['id'];
+                  final allTasks = provider.deliveryTasks;
+                  final tasks = currentUserId != null
+                      ? allTasks
+                          .where((t) => t.courierId == null || t.courierId == currentUserId)
+                          .toList()
+                      : allTasks;
 
                   if (tasks.isEmpty) {
                     return ListView(
@@ -204,12 +217,7 @@ class _CourierDashboardPageState extends State<CourierDashboardPage> {
                       .where((t) => t.status == 'assigned')
                       .length;
                   final activeTasks = tasks
-                      .where(
-                        (t) =>
-                            t.status == 'in_progress' ||
-                            t.status == 'picked_up' ||
-                            t.status == 'pickup_started',
-                      )
+                      .where((t) => t.status == 'in_progress')
                       .length;
                   final completedTasks = tasks
                       .where((t) => t.status == 'completed')
@@ -267,13 +275,16 @@ class _CourierDashboardPageState extends State<CourierDashboardPage> {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: _DeliveryTaskCard(
                             task: task,
-                            onTap: () {
-                              Navigator.of(context).push(
+                            onTap: () async {
+                              await Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (context) =>
                                       CourierTaskDetailPage(taskId: task.id),
                                 ),
                               );
+                              if (mounted) {
+                                _loadTasks();
+                              }
                             },
                           ),
                         );
@@ -320,7 +331,7 @@ class _DeliveryTaskCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Pickup Task #${task.id}',
+                  '${(task.type == 'delivery' ? 'Delivery' : 'Pickup')} Task #${task.id}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -337,13 +348,23 @@ class _DeliveryTaskCard extends StatelessWidget {
           _InfoRow(label: 'Booking', value: '${task.bookingId ?? '-'}'),
           _InfoRow(label: 'Tipe', value: task.type ?? '-'),
           _InfoRow(
-            label: 'Pickup',
+            label: 'Alamat',
             value:
-                task.pickupAddress != null &&
-                    task.pickupAddress!.trim().isNotEmpty
-                ? task.pickupAddress!
+                task.resolvedAddress != null &&
+                    task.resolvedAddress!.trim().isNotEmpty
+                ? task.resolvedAddress!
                 : '-',
           ),
+          if (task.distanceKm != null)
+            _InfoRow(
+              label: 'Jarak',
+              value: '${task.distanceKm!.toStringAsFixed(1)} km',
+            ),
+          if (task.deliveryFee != null)
+            _InfoRow(
+              label: 'Ongkir',
+              value: 'Rp ${task.deliveryFee!.round()}',
+            ),
           const SizedBox(height: 14),
           PrimaryButton(
             text: 'Lihat Detail',
@@ -410,6 +431,7 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
   bool _isLocationLoading = false;
 
   final LocationService _locationService = LocationService();
+  final TextEditingController _notesController = TextEditingController();
 
   Position? _courierPosition;
   String? _courierAddress;
@@ -421,6 +443,12 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadTask();
     });
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTask() async {
@@ -439,7 +467,7 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal memuat detail pickup: $error'),
+          content: Text('Gagal memuat detail tugas: $error'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -452,8 +480,11 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     }
   }
 
-  Future<void> _startPickup() async {
+  Future<void> _startPickup([DeliveryTask? currentTask]) async {
     final provider = context.read<DeliveryProvider>();
+    final task = currentTask ?? provider.selectedDeliveryTask;
+    final isDelivery = task?.type == 'delivery';
+    final actionLabel = isDelivery ? 'Pengantaran' : 'Pickup';
 
     setState(() {
       _isLoading = true;
@@ -468,15 +499,15 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pickup berhasil dimulai.'),
+          SnackBar(
+            content: Text('$actionLabel berhasil dimulai.'),
             backgroundColor: AppColors.success,
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(provider.errorMessage ?? 'Gagal memulai pickup.'),
+            content: Text(provider.errorMessage ?? 'Gagal memulai $actionLabel.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -488,7 +519,7 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal memulai pickup: $error'),
+          content: Text('Gagal memulai $actionLabel: $error'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -501,32 +532,45 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     }
   }
 
-  Future<void> _completePickup() async {
+  Future<void> _completePickup([DeliveryTask? currentTask]) async {
     final provider = context.read<DeliveryProvider>();
+    final task = currentTask ?? provider.selectedDeliveryTask;
+    final isDelivery = task?.type == 'delivery';
+    final actionLabel = isDelivery ? 'Pengantaran' : 'Pickup';
+    final notes = _notesController.text.trim().isNotEmpty
+        ? _notesController.text.trim()
+        : null;
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final success = await provider.completeDeliveryTask(widget.taskId);
+      final success = await provider.completeDeliveryTask(
+        widget.taskId,
+        notes: notes,
+      );
 
       if (!mounted) {
         return;
       }
 
       if (success) {
+        final message = isDelivery
+            ? 'Pengantaran berhasil diselesaikan.'
+            : 'Tugas pickup selesai. Kendaraan telah diserahkan ke bengkel dan sistem otomatis memproses kedatangan unit untuk antrean/penugasan mekanik.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pickup berhasil diselesaikan.'),
+          SnackBar(
+            content: Text(message),
             backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              provider.errorMessage ?? 'Gagal menyelesaikan pickup.',
+              provider.errorMessage ?? 'Gagal menyelesaikan $actionLabel.',
             ),
             backgroundColor: AppColors.error,
           ),
@@ -539,7 +583,7 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal menyelesaikan pickup: $error'),
+          content: Text('Gagal menyelesaikan $actionLabel: $error'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -601,10 +645,12 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     double destLat = WorkshopConstants.workshopLatitude;
     double destLng = WorkshopConstants.workshopLongitude;
 
-    if (task.pickupAddress != null && task.pickupAddress!.trim().isNotEmpty) {
+    final targetAddress = task.resolvedAddress;
+
+    if (targetAddress != null && targetAddress.trim().isNotEmpty) {
       try {
         final pos = await _locationService.getCoordinatesFromAddress(
-          task.pickupAddress!,
+          targetAddress,
         );
         if (pos != null) {
           destLat = pos.latitude;
@@ -621,9 +667,10 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
           mode: MapPageMode.viewer,
           destinationLatitude: destLat,
           destinationLongitude: destLng,
-          destinationTitle: 'Pickup #${task.id}',
+          destinationTitle:
+              '${task.type == 'delivery' ? 'Delivery' : 'Pickup'} #${task.id}',
           destinationAddress:
-              task.pickupAddress ?? WorkshopConstants.workshopAddress,
+              targetAddress ?? WorkshopConstants.workshopAddress,
         ),
       ),
     );
@@ -633,10 +680,12 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     double destLat = WorkshopConstants.workshopLatitude;
     double destLng = WorkshopConstants.workshopLongitude;
 
-    if (task.pickupAddress != null && task.pickupAddress!.trim().isNotEmpty) {
+    final targetAddress = task.resolvedAddress;
+
+    if (targetAddress != null && targetAddress.trim().isNotEmpty) {
       try {
         final pos = await _locationService.getCoordinatesFromAddress(
-          task.pickupAddress!,
+          targetAddress,
         );
         if (pos != null) {
           destLat = pos.latitude;
@@ -648,7 +697,8 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
     final launched = await _locationService.launchNavigation(
       destLat,
       destLng,
-      destinationTitle: 'Pickup #${task.id}',
+      destinationTitle:
+          '${task.type == 'delivery' ? 'Delivery' : 'Pickup'} #${task.id}',
     );
 
     if (!launched && mounted) {
@@ -697,13 +747,21 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
             );
           }
 
+          final currentUser = () {
+            try {
+              return context.read<AuthProvider>().user;
+            } catch (_) {
+              return null;
+            }
+          }();
+          final currentUserId = currentUser?['id'];
+          final isAssignedToOther = currentUserId != null &&
+              task.courierId != null &&
+              task.courierId != currentUserId;
           final status = task.status ?? '';
 
-          final canStart = status == 'assigned';
-          final canComplete =
-              status == 'in_progress' ||
-              status == 'picked_up' ||
-              status == 'pickup_started';
+          final canStart = !isAssignedToOther && status == 'assigned';
+          final canComplete = !isAssignedToOther && status == 'in_progress';
           final isCompleted = status == 'completed';
 
           return RefreshIndicator(
@@ -738,7 +796,7 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Pickup #${task.id}',
+                              '${task.type == 'delivery' ? 'Delivery' : 'Pickup'} #${task.id}',
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -760,9 +818,19 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
                         label: 'Tipe Layanan',
                         value: task.type ?? '-',
                       ),
+                      if (task.distanceKm != null)
+                        _DetailItem(
+                          label: 'Jarak',
+                          value: '${task.distanceKm!.toStringAsFixed(1)} km',
+                        ),
+                      if (task.deliveryFee != null)
+                        _DetailItem(
+                          label: 'Biaya Ongkir',
+                          value: 'Rp ${task.deliveryFee!.round()}',
+                        ),
                       const SizedBox(height: 6),
                       const Text(
-                        'Alamat Pickup',
+                        'Alamat Pengantaran / Pickup',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
@@ -788,8 +856,8 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                task.pickupAddress ??
-                                    'Alamat pickup belum tersedia.',
+                                task.resolvedAddress ??
+                                    'Alamat belum tersedia.',
                                 style: const TextStyle(
                                   color: AppColors.textPrimary,
                                   fontSize: 13,
@@ -984,7 +1052,7 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
                 // =====================================================
                 // STATUS COMPLETED
                 // =====================================================
-                if (isCompleted)
+                if (isCompleted) ...[
                   Container(
                     margin: const EdgeInsets.only(top: 4),
                     padding: const EdgeInsets.all(16),
@@ -995,18 +1063,20 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
                         color: AppColors.success.withValues(alpha: 0.4),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.check_circle,
                           color: AppColors.success,
                           size: 26,
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Pickup telah selesai.',
-                            style: TextStyle(
+                            task.type == 'delivery'
+                                ? 'Pengantaran telah selesai.'
+                                : 'Pickup telah selesai.',
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                               color: AppColors.textPrimary,
@@ -1016,23 +1086,121 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
                       ],
                     ),
                   ),
+                  if (task.type == 'pickup')
+                    Container(
+                      margin: const EdgeInsets.only(top: 10),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceCard,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline, color: AppColors.info, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'Informasi Alur Bengkel',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Penjemputan telah selesai dan unit motor telah tiba di bengkel. '
+                            'Sistem bengkel MB-engkelQQ secara otomatis memproses kedatangan unit ke antrean servis atau penugasan mekanik.',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+
+                if (isAssignedToOther)
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.errorContainer,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.lock_outline, color: AppColors.error, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Tugas ini ditugaskan kepada kurir lain (ID: ${task.courierId}). Anda hanya memiliki hak baca.',
+                            style: const TextStyle(color: AppColors.error, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                 // =====================================================
-                // MULAI PICKUP
+                // MULAI PICKUP / PENGANTARAN
                 // =====================================================
                 if (canStart)
                   PrimaryButton(
-                    text: 'Mulai Pickup',
+                    text: task.type == 'delivery' ? 'Mulai Pengantaran' : 'Mulai Pickup',
                     icon: Icons.play_arrow,
                     isLoading: _isLoading,
-                    onPressed: _startPickup,
+                    onPressed: () => _startPickup(task),
                     height: 48,
                   ),
 
                 // =====================================================
-                // SELESAIKAN PICKUP
+                // SELESAIKAN PICKUP / PENGANTARAN
                 // =====================================================
-                if (canComplete)
+                if (canComplete) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Catatan ${task.type == 'delivery' ? 'Pengantaran' : 'Pickup'} (Opsional):',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: _notesController,
+                    maxLines: 2,
+                    style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: Kendaraan telah diterima dengan baik...',
+                      hintStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      filled: true,
+                      fillColor: AppColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
@@ -1044,17 +1212,20 @@ class _CourierTaskDetailPageState extends State<CourierTaskDetailPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _isLoading ? null : _completePickup,
+                      onPressed: _isLoading ? null : () => _completePickup(task),
                       icon: const Icon(Icons.check, size: 20),
-                      label: const Text(
-                        'Selesaikan Pickup',
-                        style: TextStyle(
+                      label: Text(
+                        task.type == 'delivery'
+                            ? 'Selesaikan Pengantaran'
+                            : 'Selesaikan Pickup',
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
                       ),
                     ),
                   ),
+                ],
 
                 const SizedBox(height: 24),
               ],

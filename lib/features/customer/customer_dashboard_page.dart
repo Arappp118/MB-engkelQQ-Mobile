@@ -341,12 +341,20 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
         // Active service timeline if there are active bookings or active services
         if ((dashboard.activeBookings ?? 0) > 0 ||
             (dashboard.activeServiceOrders ?? 0) > 0) ...[
-          const SectionHeader(
-            title: 'Progres Pengerjaan Terkini',
-            subtitle: 'Pantau tahapan servis motor Anda',
-          ),
-          const ServiceStatusTimeline(currentStatus: 'in_progress'),
-          const SizedBox(height: 24),
+          () {
+            final activeStatus = _deriveActiveStatus(dashboard);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SectionHeader(
+                  title: _deriveTimelineTitle(activeStatus),
+                  subtitle: _deriveTimelineSubtitle(activeStatus),
+                ),
+                ServiceStatusTimeline(currentStatus: activeStatus),
+                const SizedBox(height: 24),
+              ],
+            );
+          }(),
         ],
 
         // Recent Bookings
@@ -755,6 +763,73 @@ class _CustomerDashboardPageState extends State<CustomerDashboardPage> {
               : '${word[0].toUpperCase()}${word.substring(1)}',
         )
         .join(' ');
+  }
+
+  String _deriveActiveStatus(Dashboard dashboard) {
+    if (dashboard.recentBookings != null) {
+      for (final b in dashboard.recentBookings!) {
+        final st = _value(b, ['status'], '').toLowerCase();
+        if (st == 'service_completed' || st == 'waiting_payment') {
+          return st;
+        }
+      }
+    }
+    if ((dashboard.activeServiceOrders ?? 0) > 0) {
+      return 'in_service';
+    }
+    if (dashboard.recentBookings != null) {
+      for (final b in dashboard.recentBookings!) {
+        final st = _value(b, ['status'], '').toLowerCase();
+        if (st.isNotEmpty && st != 'completed' && st != 'cancelled') {
+          return st;
+        }
+      }
+    }
+    return 'pending';
+  }
+
+  String _deriveTimelineTitle(String status) {
+    if (status == 'service_completed') {
+      return 'Tagihan Siap Dibayar';
+    }
+    if (status == 'waiting_payment') {
+      return 'Menunggu Verifikasi Pembayaran';
+    }
+    if (status == 'vehicle_picked_up' || status == 'waiting_pickup') {
+      return 'Status Penjemputan Motor';
+    }
+    if (status == 'waiting_service') {
+      return 'Status Kedatangan di Bengkel';
+    }
+    if (status == 'in_service') {
+      return 'Progres Pengerjaan Servis';
+    }
+    return 'Status Booking Terkini';
+  }
+
+  String _deriveTimelineSubtitle(String status) {
+    if (status == 'service_completed') {
+      return 'Servis motor Anda telah selesai dikerjakan mekanik. Silakan selesaikan pembayaran.';
+    }
+    if (status == 'waiting_payment') {
+      return 'Bukti pembayaran telah dikirim dan sedang menunggu verifikasi admin.';
+    }
+    if (status == 'vehicle_picked_up') {
+      return 'Motor telah dijemput kurir & menuju bengkel (tahap servis belum dimulai)';
+    }
+    if (status == 'waiting_pickup') {
+      return 'Menunggu kurir bengkel menjemput kendaraan Anda';
+    }
+    if (status == 'waiting_service') {
+      return 'Motor telah tiba di bengkel & masuk antrean servis';
+    }
+    if (status == 'in_service') {
+      return 'Mekanik sedang melakukan pengerjaan servis motor Anda';
+    }
+    if (status == 'confirmed') {
+      return 'Booking telah dikonfirmasi oleh bengkel';
+    }
+    return 'Pantau tahapan proses servis motor Anda';
   }
 }
 

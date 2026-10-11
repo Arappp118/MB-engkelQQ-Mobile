@@ -8,6 +8,8 @@ import '../../../core/widgets/premium_card.dart';
 import '../../../core/widgets/section_header.dart';
 import '../../../models/invoice.dart';
 import '../../../providers/invoice_provider.dart';
+import '../../../services/service_order_service.dart';
+import '../payments/customer_payment_page.dart';
 import '../service_orders/customer_service_order_detail_page.dart';
 
 class CustomerInvoiceDetailPage extends StatefulWidget {
@@ -31,6 +33,31 @@ class _CustomerInvoiceDetailPageState extends State<CustomerInvoiceDetailPage> {
 
   Future<void> _refresh() async {
     await context.read<InvoiceProvider>().loadInvoice(widget.serviceOrderId);
+  }
+
+  Future<void> _openPaymentPage() async {
+    try {
+      final order =
+          await ServiceOrderService().getServiceOrder(widget.serviceOrderId);
+      if (!mounted) return;
+      final result = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => CustomerPaymentPage(serviceOrder: order),
+        ),
+      );
+      if (result == true && mounted) {
+        _refresh();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CustomerServiceOrderDetailPage(
+            serviceOrderId: widget.serviceOrderId,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -109,7 +136,46 @@ class _CustomerInvoiceDetailPageState extends State<CustomerInvoiceDetailPage> {
                   subtitle: 'Status verifikasi transaksi keuangan',
                 ),
                 _InvoicePaymentCard(invoice: invoice),
-                const SizedBox(height: 24),
+                if (invoice.paymentStatus == null) ...[
+                  const SizedBox(height: 16),
+                  PrimaryButton(
+                    text: 'Bayar Tagihan Sekarang',
+                    icon: Icons.payment_rounded,
+                    height: 48,
+                    onPressed: _openPaymentPage,
+                  ),
+                ] else if (invoice.paymentStatus?.toLowerCase() == 'rejected') ...[
+                  const SizedBox(height: 16),
+                  PrimaryButton(
+                    text: 'Ajukan Pembayaran Ulang',
+                    icon: Icons.refresh_rounded,
+                    height: 48,
+                    onPressed: _openPaymentPage,
+                  ),
+                ] else if (invoice.paymentStatus?.toLowerCase() == 'waiting_verification') ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.warningContainer.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: AppColors.warning),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pembayaran sedang menunggu verifikasi admin. Pengajuan pembayaran baru dinonaktifkan.',
+                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
                 SecondaryButton(
                   text: 'Lihat Detail Servis',
                   icon: Icons.build_outlined,

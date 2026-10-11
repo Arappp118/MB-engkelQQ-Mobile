@@ -10,6 +10,7 @@ class ApiConstants {
   static const String defaultBaseUrl = ApiConfig.defaultBaseUrl;
 
   static String get baseUrl => ApiConfig.instance.baseUrl;
+  static String get webBaseUrl => ApiConfig.instance.webBaseUrl;
 
   // ============================================================
   // HEALTH & CONNECTION TEST
