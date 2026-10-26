@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mb_engkelqq_mobile/core/constants/api_constants.dart';
 import 'package:mb_engkelqq_mobile/models/booking.dart';
 import 'package:mb_engkelqq_mobile/models/dashboard.dart';
 import 'package:mb_engkelqq_mobile/models/delivery_task.dart';
@@ -132,5 +133,25 @@ void main() {
       expect(item.stock, 25);
       expect(item.isActive, isTrue);
     });
+
+    test('ApiConstants covers complete Laravel routes/api.php endpoint specifications', () {
+      expect(ApiConstants.health, '/health');
+      expect(ApiConstants.login, '/auth/login');
+      expect(ApiConstants.logout, '/auth/logout');
+      expect(ApiConstants.me, '/auth/me');
+      expect(ApiConstants.vehicles, '/vehicles');
+      expect(ApiConstants.bookings, '/bookings');
+      expect(ApiConstants.serviceOrders, '/service-orders');
+      expect(ApiConstants.serviceItems, '/service-items');
+      expect(ApiConstants.payments, '/payments');
+      expect(ApiConstants.deliveryTasks, '/delivery-tasks');
+      expect(ApiConstants.deliverySettings, '/delivery-settings');
+      expect(ApiConstants.paymentSettings, '/payment-settings');
+      expect(ApiConstants.invoices, '/invoices');
+      expect(ApiConstants.notifications, '/notifications');
+      expect(ApiConstants.unreadNotifications, '/notifications/unread');
+      expect(ApiConstants.dashboard, '/dashboard');
+    });
   });
 }
+

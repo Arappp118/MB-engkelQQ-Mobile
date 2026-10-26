@@ -85,6 +85,14 @@ class ApiConstants {
   static const String unreadNotifications = '/notifications/unread';
 
   // ============================================================
+  // SETTINGS
+  // ============================================================
+
+  static const String paymentSettings = '/payment-settings';
+
+  static const String deliverySettings = '/delivery-settings';
+
+  // ============================================================
   // NETWORK TIMEOUT
   // ============================================================
 
@@ -92,3 +100,4 @@ class ApiConstants {
 
   static const Duration receiveTimeout = Duration(seconds: 15);
 }
+
