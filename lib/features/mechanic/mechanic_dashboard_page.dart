@@ -1404,12 +1404,14 @@ class _ServiceItemCatalogSheetState extends State<_ServiceItemCatalogSheet> {
                             color: AppColors.error,
                           ),
                           const SizedBox(width: 6),
-                          Text(
-                            'HTTP 404: $err',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.error,
+                          Expanded(
+                            child: Text(
+                              'HTTP 404: $err',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.error,
+                              ),
                             ),
                           ),
                         ],

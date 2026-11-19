@@ -618,15 +618,16 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     OutlinedButton.icon(
                       onPressed: _initLocation,
                       icon: const Icon(Icons.refresh),
                       label: const Text('Coba Lagi'),
                     ),
-                    const SizedBox(width: 12),
                     if (_errorState == LocationPermissionState.serviceDisabled)
                       FilledButton.icon(
                         style: FilledButton.styleFrom(

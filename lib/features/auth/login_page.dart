@@ -140,18 +140,13 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Bengkel Motor Modern & Terpercaya',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'Bengkel Motor Modern & Terpercaya',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 32),
 
@@ -255,19 +250,33 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 16),
                   Center(
-                    child: TextButton.icon(
+                    child: TextButton(
                       onPressed: () => context.push('/api-settings'),
-                      icon: const Icon(
-                        Icons.settings_ethernet_rounded,
-                        size: 15,
-                        color: AppColors.textMuted,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
-                      label: Text(
-                        'Server API: ${ApiConfig.instance.baseUrl}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.settings_ethernet_rounded,
+                            size: 15,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Server API: ${ApiConfig.instance.baseUrl}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

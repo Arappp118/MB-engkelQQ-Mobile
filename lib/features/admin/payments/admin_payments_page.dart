@@ -973,6 +973,7 @@ class _PaymentVerifyOrRejectDialogState
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border),
       ),
+      actionsOverflowButtonSpacing: 8,
       title: const Text(
         'Verifikasi Pembayaran',
         style: TextStyle(color: AppColors.textPrimary),
@@ -1086,6 +1087,7 @@ class _RejectReasonDialogState extends State<_RejectReasonDialog> {
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border),
       ),
+      actionsOverflowButtonSpacing: 8,
       title: Text(
         'Tolak Pembayaran #${widget.paymentId}',
         style: const TextStyle(color: AppColors.textPrimary),
@@ -1167,6 +1169,7 @@ class _PaymentLookupDialogState extends State<_PaymentLookupDialog> {
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border),
       ),
+      actionsOverflowButtonSpacing: 8,
       title: const Text(
         'Cek Detail Pembayaran',
         style: TextStyle(color: AppColors.textPrimary),

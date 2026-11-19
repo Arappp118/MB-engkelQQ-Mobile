@@ -696,12 +696,14 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
                   color: AppColors.secondary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Mekanik Ditugaskan: Mekanik #${serviceOrder.mechanicId}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                Expanded(
+                  child: Text(
+                    'Mekanik Ditugaskan: Mekanik #${serviceOrder.mechanicId}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ],
