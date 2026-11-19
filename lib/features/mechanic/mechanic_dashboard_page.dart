@@ -59,6 +59,7 @@ class _MechanicDashboardPageState extends State<MechanicDashboardPage> {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
+          actionsOverflowButtonSpacing: 8,
           title: const Text(
             'Logout',
             style: TextStyle(color: AppColors.textPrimary),
@@ -1363,6 +1364,7 @@ class _ServiceItemCatalogSheetState extends State<_ServiceItemCatalogSheet> {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
+          actionsOverflowButtonSpacing: 8,
           title: Row(
             children: [
               Icon(dialogIcon, color: dialogColor),
@@ -1379,10 +1381,11 @@ class _ServiceItemCatalogSheetState extends State<_ServiceItemCatalogSheet> {
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               if (is404) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -1506,8 +1509,9 @@ class _ServiceItemCatalogSheetState extends State<_ServiceItemCatalogSheet> {
               ],
             ],
           ),
-          actions: [
-            FilledButton(
+        ),
+        actions: [
+          FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,

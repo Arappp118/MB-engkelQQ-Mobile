@@ -491,6 +491,7 @@ class _InteractiveMapPageState extends State<InteractiveMapPage> {
     showDialog<void>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
+        actionsOverflowButtonSpacing: 8,
         icon: const Icon(
           Icons.location_off_rounded,
           color: Colors.orange,

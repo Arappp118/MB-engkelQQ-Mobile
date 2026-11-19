@@ -541,6 +541,7 @@ class _AssignCourierDialogState extends State<_AssignCourierDialog> {
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border),
       ),
+      actionsOverflowButtonSpacing: 8,
       title: Row(
         children: [
           const Icon(Icons.person_pin_circle_outlined, color: AppColors.primary),

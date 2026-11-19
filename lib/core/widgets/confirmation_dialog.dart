@@ -46,6 +46,7 @@ class ConfirmationDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: const BorderSide(color: AppColors.border),
       ),
+      actionsOverflowButtonSpacing: 8,
       title: Text(
         title,
         style: const TextStyle(

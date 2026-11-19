@@ -103,6 +103,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
       barrierDismissible: false,
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppColors.surface,
+        actionsOverflowButtonSpacing: 8,
         icon: const Icon(
           Icons.location_off_rounded,
           color: AppColors.warning,
@@ -153,6 +154,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
       context: context,
       builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppColors.surface,
+        actionsOverflowButtonSpacing: 8,
         icon: Icon(
           state == LocationPermissionState.serviceDisabled
               ? Icons.location_off_outlined

@@ -8,7 +8,11 @@ import 'package:mb_engkelqq_mobile/features/customer/customer_dashboard_page.dar
 import 'package:mb_engkelqq_mobile/features/customer/vehicles/customer_vehicles_page.dart';
 import 'package:mb_engkelqq_mobile/features/customer/vehicles/vehicle_form_page.dart';
 import 'package:mb_engkelqq_mobile/features/customer/bookings/customer_create_booking_page.dart';
+import 'package:mb_engkelqq_mobile/features/customer/bookings/customer_booking_detail_page.dart';
+import 'package:mb_engkelqq_mobile/features/customer/payments/customer_payment_page.dart';
 import 'package:mb_engkelqq_mobile/features/customer/invoices/customer_invoices_page.dart';
+import 'package:mb_engkelqq_mobile/features/mechanic/mechanic_dashboard_page.dart';
+import 'package:mb_engkelqq_mobile/models/service_order.dart';
 import 'package:mb_engkelqq_mobile/models/vehicle.dart';
 import 'package:mb_engkelqq_mobile/features/admin/bookings/admin_bookings_page.dart';
 import 'package:mb_engkelqq_mobile/features/admin/delivery/admin_delivery_tasks_page.dart';
@@ -152,6 +156,37 @@ void main() {
 
     testWidgets('AdminDeliveryTasksPage renders without overflow on 360px viewport with 1.3x text scale', (tester) async {
       await tester.pumpWidget(buildTestApp(const AdminDeliveryTasksPage(), width: 360, textScale: 1.3));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CustomerBookingDetailPage renders without overflow on 320px viewport with 1.3x text scale', (tester) async {
+      final app = buildTestApp(const CustomerBookingDetailPage(bookingId: 1), width: 320, textScale: 1.3);
+      await tester.pumpWidget(app);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CustomerPaymentPage renders without overflow on 320px viewport with 1.3x text scale', (tester) async {
+      final order = ServiceOrder(
+        id: 1,
+        bookingId: 1,
+        status: 'service_completed',
+        subtotal: 100000,
+        deliveryFee: 15000,
+        grandTotal: 115000,
+      );
+      final app = buildTestApp(CustomerPaymentPage(serviceOrder: order), width: 320, textScale: 1.3);
+      await tester.pumpWidget(app);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('MechanicDashboardPage renders without overflow on 360px viewport with 1.3x text scale', (tester) async {
+      await tester.pumpWidget(buildTestApp(const MechanicDashboardPage(), width: 360, textScale: 1.3));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(tester.takeException(), isNull);

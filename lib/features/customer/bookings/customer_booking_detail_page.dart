@@ -68,6 +68,7 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
+          actionsOverflowButtonSpacing: 8,
           title: const Text(
             'Batalkan Booking',
             style: TextStyle(
@@ -75,10 +76,11 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Text(
                 'Apakah Anda yakin ingin membatalkan booking #${booking.nomorBooking ?? booking.id}?',
                 style: const TextStyle(
@@ -131,8 +133,9 @@ class _CustomerBookingDetailPageState extends State<CustomerBookingDetailPage> {
               ),
             ],
           ),
-          actions: [
-            TextButton(
+        ),
+        actions: [
+          TextButton(
               onPressed: () => Navigator.of(dialogCtx).pop(false),
               child: const Text(
                 'Kembali',

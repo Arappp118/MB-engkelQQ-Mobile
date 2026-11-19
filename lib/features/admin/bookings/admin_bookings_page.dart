@@ -354,6 +354,7 @@ class _AdminBookingsPageState extends State<AdminBookingsPage>
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
+          actionsOverflowButtonSpacing: 8,
           title: const Text(
             'Konfirmasi Booking',
             style: TextStyle(color: AppColors.textPrimary),
@@ -440,6 +441,7 @@ class _AdminBookingsPageState extends State<AdminBookingsPage>
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
+          actionsOverflowButtonSpacing: 8,
           title: const Text(
             'Logout',
             style: TextStyle(color: AppColors.textPrimary),

@@ -74,6 +74,7 @@ class _CourierDashboardPageState extends State<CourierDashboardPage> {
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppColors.border),
           ),
+          actionsOverflowButtonSpacing: 8,
           title: const Text(
             'Logout',
             style: TextStyle(color: AppColors.textPrimary),
