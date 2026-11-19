@@ -1416,10 +1416,8 @@ class _ServiceItemCatalogSheetState extends State<_ServiceItemCatalogSheet> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Fitur penambahan jasa/sparepart melalui aplikasi belum tersedia karena endpoint API Laravel belum terdaftar pada routes/api.php backend (HTTP 404: $err).\n\n'
-                        'Status Teknis (BLOCKED BY BACKEND):\n'
-                        'Pada website Laravel, penambahan item dilayani oleh route web "POST /service-orders/{id}/items". '
-                        'Endpoint REST API setara belum disediakan di backend Laravel, sehingga aksi ini tidak dapat diproses dari aplikasi mobile.',
+                        'Data pesanan servis atau endpoint tidak ditemukan di server (HTTP 404: $err).\n\n'
+                        'Pastikan backend Laravel versi terbaru sudah aktif dengan rute "POST /api/v1/service-orders/{id}/items" dan ID pesanan servis valid.',
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textPrimary,
@@ -1431,7 +1429,7 @@ class _ServiceItemCatalogSheetState extends State<_ServiceItemCatalogSheet> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Katalog jasa/sparepart di bawah tetap aktif untuk melihat daftar referensi item. Penambahan item dapat dilakukan melalui portal website Laravel.',
+                  'Katalog jasa/sparepart di bawah tetap aktif untuk melihat daftar referensi item.',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
