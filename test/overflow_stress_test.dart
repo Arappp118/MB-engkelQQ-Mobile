@@ -7,7 +7,9 @@ import 'package:mb_engkelqq_mobile/features/settings/api_settings_page.dart';
 import 'package:mb_engkelqq_mobile/features/customer/customer_dashboard_page.dart';
 import 'package:mb_engkelqq_mobile/features/customer/vehicles/customer_vehicles_page.dart';
 import 'package:mb_engkelqq_mobile/features/customer/vehicles/vehicle_form_page.dart';
+import 'package:mb_engkelqq_mobile/features/customer/bookings/customer_create_booking_page.dart';
 import 'package:mb_engkelqq_mobile/features/customer/invoices/customer_invoices_page.dart';
+import 'package:mb_engkelqq_mobile/models/vehicle.dart';
 import 'package:mb_engkelqq_mobile/features/admin/bookings/admin_bookings_page.dart';
 import 'package:mb_engkelqq_mobile/features/admin/delivery/admin_delivery_tasks_page.dart';
 import 'package:mb_engkelqq_mobile/features/admin/payments/admin_payments_page.dart';
@@ -42,7 +44,20 @@ class _FakeInvoiceService extends InvoiceService {}
 class _FakeNotificationService extends NotificationService {}
 class _FakePaymentService extends PaymentService {}
 class _FakeServiceOrderService extends ServiceOrderService {}
-class _FakeVehicleService extends VehicleService {}
+class _FakeVehicleService extends VehicleService {
+  @override
+  Future<List<Vehicle>> getVehicles() async {
+    return [
+      Vehicle(
+        id: 1,
+        userId: 1,
+        nomorPolisi: 'BP 1234 XY',
+        merk: 'Honda',
+        model: 'Vario 150 CBS ISS Street Extra Edition Special 2024',
+      ),
+    ];
+  }
+}
 
 Widget buildTestApp(Widget child, {double width = 360, double textScale = 1.0}) {
   return MultiProvider(
@@ -94,6 +109,14 @@ void main() {
 
     testWidgets('CustomerVehiclesPage renders without overflow on 360px viewport with 1.3x text scale', (tester) async {
       await tester.pumpWidget(buildTestApp(const CustomerVehiclesPage(), width: 360, textScale: 1.3));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CustomerCreateBookingPage renders without overflow on 320px viewport with 1.3x text scale', (tester) async {
+      final app = buildTestApp(const CustomerCreateBookingPage(), width: 320, textScale: 1.3);
+      await tester.pumpWidget(app);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(tester.takeException(), isNull);

@@ -548,6 +548,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
                       _buildVehicleDropdown(vehicles),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _selectedService,
                         dropdownColor: AppColors.surfaceCardElevated,
                         decoration: const InputDecoration(
@@ -557,7 +558,11 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
                         items: _serviceTypes.map((item) {
                           return DropdownMenuItem<String>(
                             value: item['value'],
-                            child: Text(item['label']!),
+                            child: Text(
+                              item['label']!,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -587,7 +592,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
                           borderRadius: BorderRadius.circular(12),
                           child: InputDecorator(
                             decoration: const InputDecoration(
-                              labelText: 'Tanggal Booking',
+                              labelText: 'Tanggal',
                               prefixIcon: Icon(Icons.calendar_today_outlined),
                             ),
                             child: Text(
@@ -612,7 +617,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
                           borderRadius: BorderRadius.circular(12),
                           child: InputDecorator(
                             decoration: const InputDecoration(
-                              labelText: 'Waktu Booking',
+                              labelText: 'Waktu',
                               prefixIcon: Icon(Icons.access_time_outlined),
                             ),
                             child: Text(
@@ -885,6 +890,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
 
   Widget _buildVehicleDropdown(List<Vehicle> vehicles) {
     return DropdownButtonFormField<int>(
+      isExpanded: true,
       initialValue: _selectedVehicleId,
       dropdownColor: AppColors.surfaceCardElevated,
       decoration: const InputDecoration(
@@ -897,6 +903,7 @@ class _CustomerCreateBookingPageState extends State<CustomerCreateBookingPage> {
           child: Text(
             '${vehicle.nomorPolisi} • ${vehicle.merk} ${vehicle.model}',
             overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         );
       }).toList(),

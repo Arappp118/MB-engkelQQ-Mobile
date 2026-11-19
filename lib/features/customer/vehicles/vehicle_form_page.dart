@@ -289,6 +289,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                   child: Column(
                     children: [
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _selectedTipeMesin,
                         dropdownColor: AppColors.surfaceCardElevated,
                         decoration: const InputDecoration(
@@ -298,7 +299,11 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                         items: _tipeMesinOptions.map((item) {
                           return DropdownMenuItem<String>(
                             value: item['value'],
-                            child: Text(item['label']!),
+                            child: Text(
+                              item['label']!,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -310,6 +315,7 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _selectedTransmisi,
                         dropdownColor: AppColors.surfaceCardElevated,
                         decoration: const InputDecoration(
@@ -319,7 +325,11 @@ class _VehicleFormPageState extends State<VehicleFormPage> {
                         items: _transmisiOptions.map((item) {
                           return DropdownMenuItem<String>(
                             value: item['value'],
-                            child: Text(item['label']!),
+                            child: Text(
+                              item['label']!,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           );
                         }).toList(),
                         onChanged: (value) {
