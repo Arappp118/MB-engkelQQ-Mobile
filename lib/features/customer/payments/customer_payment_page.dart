@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -182,8 +183,9 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
             subtitle: 'Pilih salah satu metode pembayaran yang tersedia',
           ),
           _buildPaymentMethod(isProofRequired),
-          const SizedBox(height: 20),
           if (isProofRequired) ...[
+            _buildPaymentInstructions(),
+            const SizedBox(height: 20),
             const SectionHeader(
               title: 'Upload Bukti Bayar',
               subtitle: 'Lampirkan foto/struk transfer atau QRIS',
@@ -375,6 +377,164 @@ class _CustomerPaymentPageState extends State<CustomerPaymentPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildPaymentInstructions() {
+    if (_selectedMethod == 'transfer') {
+      return Container(
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(
+                  Icons.account_balance_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Rekening Tujuan Transfer',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.inputBackground,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Bank Central Asia (BCA)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          '8830123456',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'a.n. Bengkel MotoCare Official',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      size: 18,
+                      color: AppColors.primaryLight,
+                    ),
+                    tooltip: 'Salin No. Rekening',
+                    onPressed: () {
+                      Clipboard.setData(const ClipboardData(text: '8830123456'));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Nomor rekening BCA (8830123456) disalin!',
+                          ),
+                          backgroundColor: AppColors.surfaceCardElevated,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_selectedMethod == 'qris') {
+      return Container(
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.qr_code_2_rounded,
+                  size: 20,
+                  color: AppColors.secondary,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Pembayaran via QRIS Resmi',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Merchant: MotoCare Official',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Buka aplikasi BCA / GoPay / OVO / Dana / LinkAja, scan barcode QRIS di bengkel atau hubungi kasir, lalu unggah bukti transfer/screenshot di bawah.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildProofSection() {
