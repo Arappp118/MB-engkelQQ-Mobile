@@ -18,4 +18,11 @@ class WorkshopConstants {
   /// URL Google Maps lokasi bengkel resmi
   static const String googleMapsUrl =
       'https://maps.app.goo.gl/drPtbMuXxXATMYNa9';
+
+  /// Nomor kontak bantuan & CS MB-engkelQQ
+  static const String customerServicePhone = '081268001234';
+
+  /// URL WhatsApp CS untuk bantuan pendaftaran & reset password
+  static const String customerServiceWaUrl =
+      'https://wa.me/6281268001234';
 }

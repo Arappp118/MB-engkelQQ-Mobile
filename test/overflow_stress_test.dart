@@ -97,6 +97,34 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('LoginPage Forgot Password sheet opens without overflow on 320px viewport', (tester) async {
+      await tester.pumpWidget(buildTestApp(const LoginPage(), width: 320, textScale: 1.3));
+      await tester.pump();
+      final forgotBtn = find.text('Lupa Password?');
+      expect(forgotBtn, findsOneWidget);
+      await tester.ensureVisible(forgotBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(forgotBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+      expect(find.text('Petunjuk Reset Password:'), findsOneWidget);
+    });
+
+    testWidgets('LoginPage Register sheet opens without overflow on 320px viewport', (tester) async {
+      await tester.pumpWidget(buildTestApp(const LoginPage(), width: 320, textScale: 1.3));
+      await tester.pump();
+      final registerBtn = find.text('Daftar Sekarang');
+      expect(registerBtn, findsOneWidget);
+      await tester.ensureVisible(registerBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(registerBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(tester.takeException(), isNull);
+      expect(find.text('Tahapan Pendaftaran Pelanggan:'), findsOneWidget);
+    });
+
     testWidgets('ApiSettingsPage renders without overflow on 320px viewport with 1.3x text scale', (tester) async {
       await tester.pumpWidget(buildTestApp(const ApiSettingsPage(), width: 320, textScale: 1.3));
       await tester.pump();
